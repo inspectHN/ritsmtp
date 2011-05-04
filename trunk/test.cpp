@@ -14,6 +14,13 @@ main()
     
     cout << "This is A: " << a << endl;
     
+    int b =0;
+    
+    b = 3-2/18;
+    
+    cout << "This is B: " << b << endl;
+    
+    
     system("pause");
     return 0;
 }
