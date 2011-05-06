@@ -186,7 +186,7 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
   }  
 }
  
-int main()
+int main(int argc, char *argv[])
 {
  printf("Starting up multi-threaded TCP server\n");
  //seed random number generator
