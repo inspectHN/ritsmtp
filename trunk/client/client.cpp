@@ -1,3 +1,4 @@
+//SMTP CLIENT 
 
 #include <windows.h>
 #include <winsock2.h>
@@ -28,7 +29,7 @@ int main()
     char ip[15];
     WSADATA data;
      
-    cout<<"Echo Client ";
+    cout<<"SMTP Client ";
      
     cout<<"\n\n\nEnter IP to connect to: ";
     gets(ip);
@@ -38,7 +39,7 @@ int main()
      
      
     ser.sin_family=AF_INET;
-    ser.sin_port=htons(31000);                    //Set the port
+    ser.sin_port=htons(25);                    //Set the port
     ser.sin_addr.s_addr=inet_addr(ip);      //Set the address we want to connect to
      
     memcpy(&addr,&ser,sizeof(SOCKADDR_IN));
@@ -71,6 +72,13 @@ int main()
      
     char RecvdData[100] = "";
     int ret;
+    
+      ret = recv(sock,RecvdData,sizeof(RecvdData),0);
+       if(ret > 0)
+       {
+        cout<<endl<<RecvdData;
+        strcpy(RecvdData,"");
+	}
  
     while(true)
     {
