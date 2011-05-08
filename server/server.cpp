@@ -1,4 +1,4 @@
-//Brent Kapral Multi-threaded server
+// SMTP Multi-threaded server
 //Modified code from mycourses download
 
 #include <windows.h>
@@ -73,31 +73,22 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
   fout.open(messageLog);
   
   
-  // strcpy(sendData,"hello little friend\n");
-  // cout << strlen(sendData) << "\n";
-  // send(current_client,sendData,strlen(sendData),0);
+  strcpy(sendData,"220 smtp.droptables.com\n");
+  //cout << strlen(sendData) << "\n";
+  send(current_client,sendData,strlen(sendData),0);
    
   // our recv loop
   while(true)
   {
 	 
      res = recv(current_client,rcvbuf,sizeof(rcvbuf),0); // recv cmds
-     cout << "strlen is: " << strlen(rcvbuf) << endl;
-     cout << "sizeof is: " << sizeof(rcvbuf) << endl;
 	 char rcvmsg[(strlen(rcvbuf)-1)];//CREATE NEW BUFFER WITH SIZE OF MESSAGE RECIEVED MINUS 1
 	 strcpy(rcvmsg, ""); //EMPTY "RECIEVED MESSAGE"
 	//FILL RECIEVED MESSAGE WITH RECIEVED BUFFER
 	 strcpy(rcvmsg, rcvbuf);
 	 int endln = strlen(rcvmsg);
-	 rcvmsg[endln-1] = '\0';
-	 cout << "strlen is: " << strlen(rcvmsg) << endl;
-     cout << "sizeof is: " << sizeof(rcvmsg) << endl;
-     cout << "res is: " << res << endl;
+	 rcvmsg[endln-1] = '\0';//APPEND A NULL TO THE END OF THE BUFFER
      
-	for (int i = 0; i < strlen(rcvmsg); i++)
-	{
-		cout << rcvmsg[i];// << endl;
-	}
      
 	 //what did I receive
      cout << "Received:" << rcvmsg << endl;// << ":stuff" << "\n";
@@ -116,8 +107,6 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
      if (res != 0)
      {
  
-          /* Put your stuff here */
-        
         //create copy of rcvbuf in order to change it to lower case for comparison
 		char rcvcopy[sizeof(rcvmsg)];
 		strcpy(rcvcopy,rcvmsg);
@@ -128,17 +117,19 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 			rcvcopy[i]=tolower(rcvcopy[i]);
 		}
 		
-		//cout << "rcvbuf is: " << rcvbuf << endl; //DEBUGGING
-	//	cout << "rcvcopy is: " << rcvcopy << endl;//DEBUGGING
+		
 		
 		//check if client says hello or a varient thereof
         if((strcmp(rcvcopy,"hello") == 0) || (strcmp(rcvcopy,"helo") == 0) || (strcmp(rcvcopy,"ehlo") == 0))
 		{		
 		
-			cout << "Client ip address is: " << inet_ntoa(cAddress.sin_addr) << endl;
+			cout << "Initialized connection from: " << inet_ntoa(cAddress.sin_addr) << endl;
 			//create the string to send back to the client
-			strcpy(sendData, "Hello there ");
-			strcat(sendData, inet_ntoa(cAddress.sin_addr));
+			strcpy(sendData, "250  ");
+			int len1 = strlen(rcvmsg);
+			
+			strncat(sendData, rcvmsg, (len1-2));
+		//	strcat(sendData, inet_ntoa(cAddress.sin_addr));
 			strcat(sendData, ". Thanks for joining my server.");
 			send(current_client,sendData,sizeof(sendData),0);
 			fout << "\"" << "Sent Message: \",\"" << sendData << "\"\n";
@@ -150,9 +141,9 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 			
 			
 		}//If client says bye or end or quit, close the thread.
-		else if((strcmp(rcvcopy,"bye")==0) || (strcmp(rcvcopy,"end")==0) || (strcmp(rcvcopy,"quit") == 0)|| (strcmp(rcvcopy,"exit") == 0))
+		else if((strcmp(rcvcopy,"quit") == 0))
 		{
-			strcpy(sendData,"Thank You, Please come again.");
+			strcpy(sendData,"221 Bye");
 			fout << "\"" << "Sent Message: \",\"" << sendData << "\"\n";
 			send(current_client,sendData,sizeof(sendData),0);
 			fout.close();
@@ -162,8 +153,7 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 		}//Otherwise, echo what the client said back to them
 		else
 		{
-		//	cout << "send data is: " << sendData << endl;
-		//	cout << "rcvbuf is: " << rcvbuf << endl;
+		
 			strcpy(sendData,"");
 			strcpy(sendData,rcvmsg);
 			strcpy(rcvmsg,"");
@@ -212,7 +202,7 @@ int main(int argc, char *argv[])
  // fill in winsock struct ...
  server.sin_family=AF_INET;
  server.sin_addr.s_addr=INADDR_ANY;
- server.sin_port=htons(31000); // listen on telnet port 31000
+ server.sin_port=htons(25); // listen on SMTP port 25
   
  // create our socket
  sock=socket(AF_INET,SOCK_STREAM,0);
