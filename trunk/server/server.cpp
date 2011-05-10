@@ -9,7 +9,6 @@
 #include <winsock2.h>
 #include <string>
 #include <fstream>
-#include <fnctl.h>
 #pragma comment(lib, "Ws2_32.lib")
 #define SERVER_PORT 25
 #define LSIDE 
@@ -40,8 +39,7 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
   char sendData[100];
   // for error checking
   int res;
-  int flags = fcntl(current_client, F_GETFL);
-  int result = fcntl(current_client, F_SETFL, flags & ~O_NONBLOCK);
+
 
 
    
@@ -132,13 +130,7 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 			send(current_client,sendData,sizeof(sendData),0);
 		}
 
-			if((strcmp(rcvmsg,".") == 0))
-			{
-				strncpy(sendData,"250 Ok:",7);
-				strcat(sendData, " Queued as: ");
-				strcat(sendData, itoa(threadID, ThrdID, 10));
-				send(current_client,sendData,sizeof(sendData),0);
-			}
+			
 			if((strcmp(rcvmsg,"QUIT") == 0))
 		{
 			strcpy(sendData,"221 Bye");
@@ -146,12 +138,48 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 			fout.close();
 			ExitThread(0);
 		}
-		if((strcmp(rcvmsg,"DATA") == 0))
+		if((strncmp(rcvmsg,"DATA",5) == 0))
 		{
+			
 			strcpy(sendData,"354 End data with <CR><LF>.<CR><LF>");
 			send(current_client,sendData,sizeof(sendData),0);
 			strcpy(sendData,"");
-		send(current_client,sendData,sizeof(sendData),0);
+			
+			
+			int check = 1;
+		//	u_long iMode=1;//1 for non-blocking, 0 for blocking
+ 		//	ioctlsocket(current_client,FIONBIO,&iMode);
+ 		
+			while(check != 0)
+			{	
+			res = recv(current_client,rcvbuf,sizeof(rcvbuf),0);
+			rcvbuf[(strlen(rcvbuf))-1]='\0'; //remove newline char from end and replace it with a null char						
+			check = strcmp(rcvbuf, ".");			
+			cout << "check is: " << check << endl;
+			
+			fout << endl << rcvbuf;
+			
+			
+			if(check != 0)
+				send(current_client,sendData,sizeof(sendData),0);
+						
+			if(check == 0)
+				{
+					for(int i = 0; i < sizeof(sendData); i++)
+					{
+						sendData[i] = '\0';
+					}
+					strncpy(sendData,"250 Ok: Queued as ",18);
+					//strcat(sendData, " Queued as: ");
+					strcat(sendData, itoa(threadID, ThrdID, 10));
+					send(current_client,sendData,sizeof(sendData),0);
+					//break;
+				}
+			
+			
+
+		    }
+
 		}
 	}
 // 		
@@ -237,9 +265,6 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 int main(int argc, char *argv[])
 {
  printf("Starting up multi-threaded TCP server\n");
- //seed random number generator
- srand(time(NULL));
- u_long iMode = 1;
 
  SOCKET sock;
   
@@ -253,10 +278,7 @@ int main(int argc, char *argv[])
   
  // start winsock
  int ret = WSAStartup(0x202,&wsaData); // use highest version of winsock avalible
-// int iResult = ioctlsocket(sock, FIONBIO, &iMode);
-//  cout << "iresult: " << iResult << endl;
-// if (iResult != NO_ERROR)
-//  printf("Error at WSAStartup()\n");
+
  if(ret != 0)
  {
     return 0;
@@ -275,7 +297,7 @@ int main(int argc, char *argv[])
     return 0;
  }
    
- // bind our socket to a port(port 123)
+ // bind our socket to a port(port 25)
  if( bind(sock,(sockaddr*)&server,sizeof(server)) !=0 )
  {
     return 0;
@@ -292,7 +314,10 @@ int main(int argc, char *argv[])
   
  sockaddr_in from;
  int fromlen = sizeof(from);
-   
+ 
+// u_long iMode=1;
+// ioctlsocket(client,FIONBIO,&iMode);//HOPEFULLY CHANGE THE CLIENT SOCKET TO UNBLOCKING MODE
+
  // loop forever
  while(true)
  {
