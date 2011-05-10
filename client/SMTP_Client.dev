@@ -58,7 +58,7 @@ ProductVersion=
 AutoIncBuildNr=0
 
 [Unit2]
-FileName=..\..\..\..\..\..\..\..\..\smtp\client_functions.h
+FileName=client_functions.cpp
 CompileCpp=1
 Folder=SMTP_Client
 Compile=1
@@ -68,7 +68,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit3]
-FileName=..\..\..\..\..\..\..\..\..\smtp\client_functions.cpp
+FileName=client_functions.h
 CompileCpp=1
 Folder=SMTP_Client
 Compile=1
