@@ -10,20 +10,111 @@
 #include <string>
 #include <fstream>
 #pragma comment(lib, "Ws2_32.lib")
-#define SERVER_PORT 25
-#define LSIDE 
-#define RSIDE
+#define SERVER_PORT 2525
 #define OUR_DOMAIN "droptables.com"
+
+DWORD WINAPI receive_cmds(LPVOID lpParam);
+int sendMessage(sockaddr_in cAddress, char messageLog[]);
 
 
 using namespace std;
+
+
+//GLOBAL VARIABLES FOR IP ADDRESS
+string LSIDE;
+string RSIDE;
+ 
+int main(int argc, char *argv[])
+{
+	
+	if(argc != 3)
+	{
+		cout << "Not enough variables on the command line, please check and try again.\n\nUSAGE: PROGRAM NAME  LSIDE_IP RSIDE_IP\n\n\n";
+		system("pause");
+		return 1;
+	}else
+	{
+		LSIDE = argv[1];
+		RSIDE = argv[2];
+	}
+
+	
+ printf("Starting up multi-threaded SMTP server\n");
+
+ SOCKET sock;
+  
+ // for our thread
+ DWORD thread;
+  
+ WSADATA wsaData;
+ 
+ sockaddr_in server;
+ 
+  
+ // start winsock
+ int ret = WSAStartup(0x202,&wsaData); // use highest version of winsock avalible
+
+ if(ret != 0)
+ {
+    return 0;
+ }
+   
+ // fill in winsock struct ...
+ server.sin_family=AF_INET;
+ server.sin_addr.s_addr=INADDR_ANY;
+ server.sin_port=htons(SERVER_PORT); // listen on SMTP port 25
+  
+ // create our socket
+ sock=socket(AF_INET,SOCK_STREAM,0);
+  
+ if(sock == INVALID_SOCKET)
+ {
+    return 0;
+ }
+   
+ // bind our socket to a port(port 25)
+ if( bind(sock,(sockaddr*)&server,sizeof(server)) !=0 )
+ {
+    return 0;
+ }
+   
+ // listen for a connection 
+ if(listen(sock,5) != 0)
+ {
+    return 0;
+ }
+  
+ // socket that we sendrecv data on
+ SOCKET client;
+  
+ sockaddr_in from;
+ int fromlen = sizeof(from);
+ 
+
+ // loop forever
+ while(true)
+ {
+  // accept connections
+  client = accept(sock,(struct sockaddr*)&from,&fromlen);
+  printf("Client connected\r\n");
+   
+  // create our recv_cmds thread and parse client socket as a parameter
+  CreateThread(NULL, 0,receive_cmds,(LPVOID)client, 0, &thread); 
+ }
+  
+ // shutdown winsock
+ closesocket(sock);
+ WSACleanup();
+  
+ // exit
+ return 0;
+}
+//==================================================================================================//
 
 // our thread for recving commands
 DWORD WINAPI receive_cmds(LPVOID lpParam)
 {
   printf("thread created\r\n");
-  
-  
   
   // set our socket to the socket passed in as a parameter 
   SOCKET current_client = (SOCKET)lpParam;
@@ -39,8 +130,6 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
   char sendData[100];
   // for error checking
   int res;
-
-
 
    
    //LOGGING BEGIN
@@ -84,7 +173,7 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
   strcpy(sendData,"220 smtp.droptables.com\n");
   //cout << strlen(sendData) << "\n";
   send(current_client,sendData,strlen(sendData),0);
-   fout << inet_ntoa(cAddress.sin_addr);
+  fout << inet_ntoa(cAddress.sin_addr);
   // our recv loop
   while(true)
   {
@@ -136,6 +225,7 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 			strcpy(sendData,"221 Bye");
 			send(current_client,sendData,sizeof(sendData),0);
 			fout.close();
+			sendMessage(cAddress, messageLog); //STILL IN PROGRESS
 			ExitThread(0);
 		}
 		if((strncmp(rcvmsg,"DATA",5) == 0))
@@ -147,15 +237,13 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 			
 			
 			int check = 1;
-		//	u_long iMode=1;//1 for non-blocking, 0 for blocking
- 		//	ioctlsocket(current_client,FIONBIO,&iMode);
- 		
+	 		
 			while(check != 0)
 			{	
 			res = recv(current_client,rcvbuf,sizeof(rcvbuf),0);
 			rcvbuf[(strlen(rcvbuf))-1]='\0'; //remove newline char from end and replace it with a null char						
 			check = strcmp(rcvbuf, ".");			
-			cout << "check is: " << check << endl;
+	
 			
 			fout << endl << rcvbuf;
 			
@@ -170,169 +258,58 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 						sendData[i] = '\0';
 					}
 					strncpy(sendData,"250 Ok: Queued as ",18);
-					//strcat(sendData, " Queued as: ");
 					strcat(sendData, itoa(threadID, ThrdID, 10));
 					send(current_client,sendData,sizeof(sendData),0);
-					//break;
+					
 				}
-			
-			
-
-		    }
-
+      	  }
 		}
-	}
-// 		
-//        //create copy of rcvbuf
-//		char rcvcopy[100];
-//		strcpy(rcvcopy,rcvmsg); // create a copy for modification
-//		char fromAddress[strlen(rcvcopy)];//Create a variable to store the from address
-//		char toDomain[strlen(rcvcopy)]; //Create a new char array to store rcpt address	
-//		int rcptCtr = 0;
-//		//check if client says hello or a varient thereof
-//        if((strncmp(rcvcopy,"HELO",4) == 0) || (strncmp(rcvcopy,"EHLO",4) == 0))
-//		{		
-//			
-//			cout << "Initialized connection from: " << inet_ntoa(cAddress.sin_addr) << endl;
-//			//create the string to send back to the client
-//			strcpy(sendData, "250  ");
-//			//int len1 = strlen(rcvmsg);
-//			
-//			strncat(sendData, rcvmsg, (strlen(rcvmsg)));
-//		//	strcat(sendData, inet_ntoa(cAddress.sin_addr));
-//			strcat(sendData, ". Thanks for joining my server.");
-//			send(current_client,sendData,sizeof(sendData),0);
-//		//	fout << sendData << "\n";
-//			//Empty the send buffer
-//			for (int i = 0; i <100; i++)
-//			{
-//				sendData[i] = '\0';
-//			}
-//			
-//		//	strcpy(rcvcopy,rcvmsg);
-//		}//If client says bye or end or quit, close the thread.
-//		else if((strcmp(rcvcopy,"QUIT") == 0))
-//		{
-//			strcpy(sendData,"221 Bye");
-//		//	fout << "\"" << "Sent Message: \",\"" << sendData << "\"\n";
-//			send(current_client,sendData,sizeof(sendData),0);
-//			fout.close();
-//			ExitThread(0);
-//			
-//		
-//		}//Check for MAIL FROM And store the from address into a variable
-//		else if((strncmp(rcvcopy,"MAIL FROM:",10) == 0)){			
-//			strncpy(fromAddress,rcvcopy,strlen(rcvcopy));
-//			strcpy(sendData, "250 Ok");
-//			send(current_client,sendData,sizeof(sendData),0);
-//		}//Check for RCPT TO and see where it is destined for and route it properly
-//		else if((strncmp(rcvcopy,"RCPT TO:",8) == 0))
-//		{
-//			
-//			strcpy(toDomain,(strstr(rcvcopy,"@")+1)); //copy string from char after @ to end
-//			toDomain[(strlen(toDomain))-1]='\0'; //append null char over the last > to terminate the string
-//			if(strcmp(toDomain,OUR_DOMAIN) == 0)
-//			{
-//				
-//			cout << "OUR DOMAIN!!!!" << endl;
-//			
-//			}
-//		}
-//		else{
-//		
-//			strcpy(sendData,"");
-//			strcpy(sendData,rcvmsg);
-//			strcpy(rcvmsg,"");
-//		//	fout << "\"" << "Sent Message: \",\"" << sendData << "\"\n";
-//			send(current_client,sendData,sizeof(sendData),0);
-//		} 
-//          
-//          
-//          
-//          
-//     
-//                              
-//      
-//     // clear buffers
-//       strcpy(sendData,"");
-//       strcpy(rcvbuf,"");
-//       strcpy(rcvcopy,"");
-//      // cout << "at end, sendData, rcvbuf, rcvcpy: " << sendData << " , " << rcvbuf << " , " << rcvcopy << endl; //DEBUGGING
-//  	}
-  }  
+	  }
+    }  
 }
- 
-int main(int argc, char *argv[])
+
+//===================================================================================================================//
+
+int sendMessage(sockaddr_in client, char messageLog[32])
 {
- printf("Starting up multi-threaded TCP server\n");
+	ifstream fin; //open message log for reading
+	fin.open(messageLog);
+	if(!fin.is_open())
+	{
+		cout << "error opening queued message: " << messageLog << ".  Check the file and try again.\n";
+	}
+	
+	string dummy;
+	int cnt=0;
+	getline(fin, dummy); //dummy string for line counting
+	cnt++;//number of lines in the file
+	while(!fin.eof())//loop to count total lines in the file
+	{
+		getline(fin, dummy);
+	//	cout << dummy << endl;
+		cnt++;
+	}
+	
+	string msg[cnt];//array of strings for the message
+	fin.clear(); //clear the eof flag
+	fin.seekg(0);//reset file pointer to beginning
+	
+	for(int i = 0; i < cnt; i++)//loop to read in lines
+	{
+		getline(fin, msg[i]);
+	}
+	
+	string mailFrom = msg[2].substr((msg[2].find_first_of("@")+1));//get domain name
+	mailFrom = mailFrom.substr(0,(mailFrom.length()-1)); //truncate trailing ">"
 
- SOCKET sock;
-  
- // for our thread
- DWORD thread;
-  
- WSADATA wsaData;
- 
- sockaddr_in server;
- 
-  
- // start winsock
- int ret = WSAStartup(0x202,&wsaData); // use highest version of winsock avalible
-
- if(ret != 0)
- {
-    return 0;
- }
-   
- // fill in winsock struct ...
- server.sin_family=AF_INET;
- server.sin_addr.s_addr=INADDR_ANY;
- server.sin_port=htons(SERVER_PORT); // listen on SMTP port 25
-  
- // create our socket
- sock=socket(AF_INET,SOCK_STREAM,0);
-  
- if(sock == INVALID_SOCKET)
- {
-    return 0;
- }
-   
- // bind our socket to a port(port 25)
- if( bind(sock,(sockaddr*)&server,sizeof(server)) !=0 )
- {
-    return 0;
- }
-   
- // listen for a connection 
- if(listen(sock,5) != 0)
- {
-    return 0;
- }
-  
- // socket that we sendrecv data on
- SOCKET client;
-  
- sockaddr_in from;
- int fromlen = sizeof(from);
- 
-// u_long iMode=1;
-// ioctlsocket(client,FIONBIO,&iMode);//HOPEFULLY CHANGE THE CLIENT SOCKET TO UNBLOCKING MODE
-
- // loop forever
- while(true)
- {
-  // accept connections
-  client = accept(sock,(struct sockaddr*)&from,&fromlen);
-  printf("Client connected\r\n");
-   
-  // create our recv_cmds thread and parse client socket as a parameter
-  CreateThread(NULL, 0,receive_cmds,(LPVOID)client, 0, &thread); 
- }
-  
- // shutdown winsock
- closesocket(sock);
- WSACleanup();
-  
- // exit
- return 0;
+	if(mailFrom == OUR_DOMAIN)
+	cout << "yay\n";
+	
+	
+	
+	
+	 
+     
+	
+	return 0;
 }
