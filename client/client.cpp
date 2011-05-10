@@ -34,16 +34,16 @@ int main()
     
     while(1)
     {
-        printMenu(); 
+        //printMenu(); 
         cout<<"Enter IP to connect to: ";
         gets(ip);
-     
+        //fgets(ip,sizeof(ip),stdin);
         sockaddr_in ser;
         sockaddr addr;
      
      
         ser.sin_family=AF_INET;
-        ser.sin_port=htons(2525);                    //Set the port
+        ser.sin_port=htons(25);                    //Set the port
         ser.sin_addr.s_addr=inet_addr(ip);      //Set the address we want to connect to
      
         memcpy(&addr,&ser,sizeof(SOCKADDR_IN));
@@ -86,16 +86,18 @@ int main()
  
         //while(true)
         {
-            char *str = "HELO ";
+            char str[100] = "HELO ";
             
             strcpy(buf,"");
             cout<<"\nEnter hostname\n";
             fgets(buf,sizeof(buf),stdin);
-            
+            cout << "Before strcat\n\n";
             strcat(str, buf);          
+            cout << str << endl << endl;
+            
             Sleep(5);
             res = send(sock,str,sizeof(str),0);
-          
+          cout << "Sent message\n\n";
             if(res==0)
             { 
                 //0==other side terminated conn
@@ -121,13 +123,23 @@ int main()
             }
             
             // Entering MAIL FROM:
-            char *from = "MAIL FROM:<";
+            char from[100] = "MAIL FROM:<";
             strcpy(buf,"");
             cout<<"\nEnter your email address\n";
             fgets(buf,sizeof(buf),stdin);
             
+            // This portion doesn't make much sense, just do it.
+            int len = strlen(buf);
+            buf[len-1] = '\0';
+            // Ending of non-sense
+            
             strcat(from,buf);
-            strcat(from,">");          
+            strcat(from,">");
+            
+            // Another line of non-sense
+            strcat(from,"\n");
+            // Ending this line of non-sense
+                 
             Sleep(5);
             res = send(sock,from,sizeof(from),0);
           
@@ -159,18 +171,28 @@ int main()
             // RCPT TO:
             while(1)
             {
-                char *rcpt = "RCPT TO:<";
+                char rcpt[100] = "RCPT TO:<";
                 strcpy(buf,"");
                 cout<<"\nEnter recipient's email address. When done adding recipients, enter DATA\n";
                 fgets(buf,sizeof(buf),stdin);
                 
-                if(buf == "DATA")
+                if(strcmp(buf,"DATA\n") == 0)
                 {
                     break;
                 }
                 
+                // This portion doesn't make much sense, just do it.
+                int len = strlen(buf);
+                buf[len-1] = '\0';
+                // Ending of non-sense
+            
                 strcat(rcpt, buf);
                 strcat(rcpt, ">");          
+                
+                // Another line of non-sense
+                strcat(rcpt,"\n");
+                // Ending this line of non-sense
+                
                 Sleep(5);
                 res = send(sock,rcpt,sizeof(rcpt),0);
           
@@ -201,7 +223,7 @@ int main()
             // Ending of RCPT TO while loop
             
             // Send "DATA" message to server
-            char *DATA = "DATA";
+            char DATA[10] = "DATA\n";
                        
             Sleep(5);
             res = send(sock,DATA,sizeof(DATA),0);
@@ -232,31 +254,31 @@ int main()
             // End of sending the message "DATA" to server
             
             // Entering Subject of message            
-            char *subject = "Subject: ";
-            strcpy(buf,"");
-            cout<<"\nEnter Subject(leave blank if none is needed)\n";
-            fgets(buf,sizeof(buf),stdin);
-                
-            strcat(subject, buf);         
-            Sleep(5);
-            res = send(sock,subject,sizeof(subject),0);
-          
-            if(res==0)
-            { 
-                //0==other side terminated conn
-                printf("\nSERVER terminated connection\n");
-                Sleep(40);
-                closesocket(client);
-                client = 0;
-                break;
-            }
-            else if(res==SOCKET_ERROR)
-            { 
-                //-1 == send error
-                printf("Socket error\n");
-                Sleep(40);
-                break;
-            }
+//            char subject[100] = "Subject: ";
+//            strcpy(buf,"");
+//            cout<<"\nEnter Subject(leave blank if none is needed)\n";
+//            fgets(buf,sizeof(buf),stdin);
+//                
+//            strcat(subject, buf);         
+//            Sleep(5);
+//            res = send(sock,subject,sizeof(subject),0);
+//          
+//            if(res==0)
+//            { 
+//                //0==other side terminated conn
+//                printf("\nSERVER terminated connection\n");
+//                Sleep(40);
+//                closesocket(client);
+//                client = 0;
+//                break;
+//            }
+//            else if(res==SOCKET_ERROR)
+//            { 
+//                //-1 == send error
+//                printf("Socket error\n");
+//                Sleep(40);
+//                break;
+//            }
             // Ending Subject of message
             
             // Enter message body
@@ -265,26 +287,22 @@ int main()
             
             while(1)
             {
-                strcpy(buf,"");
                 cout << "--> ";
+                fgets(buf,sizeof(buf),stdin);
                 
-                string line;
-                getline(cin, line);
-                
-                if(line == "DONE")
+                if(strcmp(buf,"DONE\n") == 0)
                 {
                     break;
                 }
-                else if(line == ".")
+                else if(strcmp(buf,".\n") == 0)
                 {
-                    line = "..";
+                    strcpy(buf,"");
+                    strcat(buf,"..\n");
                 }
                 
-                
-                const char *message = line.c_str();
-                //strcat(buf,message);
+                cout << buf << endl;
                 Sleep(5);
-                res = send(sock,message,sizeof(message),0);
+                res = send(sock,buf,sizeof(buf),0);
                 
                 if(res==0)
                 { 
@@ -302,8 +320,13 @@ int main()
                     Sleep(40);
                     break;
                 }
+        
+            for(int i=0; i<1000; i++)
+            {
+                buf[i] = '\0';    
             }
-            char *ending = ".";         
+            }
+            char *ending = ".\n";         
             Sleep(5);
             res = send(sock,ending,sizeof(ending),0);
           
