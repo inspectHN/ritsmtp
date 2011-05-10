@@ -4,7 +4,7 @@
 #include <winsock2.h>
 #include <stdio.h>
 #include <iostream>
-#include "client_functions.h";
+#include "client_functions.h"
 
 using namespace std;
 
@@ -12,12 +12,6 @@ using namespace std;
 
 // SOCKETS
 SOCKET sock,client;
- 
-void s_cl(char *a, int x)
-{
-    cout<<a;
-}
- 
  
 int main()
 {
@@ -37,32 +31,13 @@ int main()
         printMenu(); 
         cout<<"\n\n\nEnter IP to connect to: ";
         gets(ip);
-//     
-          sockaddr_in ser;
-          sockaddr addr;
-//     
-//     
-//        ser.sin_family=AF_INET;
-//        ser.sin_port=htons(25);                    //Set the port
-//        ser.sin_addr.s_addr=inet_addr(ip);      //Set the address we want to connect to
-//     
-          memcpy(&addr,&ser,sizeof(SOCKADDR_IN));
-//     
-//        res = WSAStartup(MAKEWORD(1,1),&data);      //Start Winsock
-// 
-//        if(res != 0)
-//            s_cl("WSAStarup failed",WSAGetLastError());
-// 
-//        sock=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);       //Create the socket
-//            if(sock==INVALID_SOCKET )
-//                s_cl("Invalid Socket ",WSAGetLastError());
-//            else if(sock==SOCKET_ERROR)
-//                s_cl("Socket Error)",WSAGetLastError());
-//            else
-//                cout<<"Socket Established"<<endl;
      
- 
-         sock = createSocket(ser, ip);    
+        sockaddr_in ser;
+        sockaddr addr;
+    
+        memcpy(&addr,&ser,sizeof(SOCKADDR_IN));
+     
+        sock = createSocket(ser, *ip, data);    
      
         res=connect(sock,&addr,sizeof(addr));               //Connect to the server
             if(res !=0 )
