@@ -14,15 +14,14 @@ void printMenu()
     }
 }
 
-SOCKET createSocket(sockaddr_in &ser, char ip[15])
+SOCKET createSocket(sockaddr_in &ser, char ip[15], WSADATA data)
 {
-       //sockaddr addr;
+        int res;
+        SOCKET sock;    
      
         ser.sin_family=AF_INET;
         ser.sin_port=htons(25);                    //Set the port
         ser.sin_addr.s_addr=inet_addr(ip);      //Set the address we want to connect to
-     
-        memcpy(&addr,&ser,sizeof(SOCKADDR_IN));
      
         res = WSAStartup(MAKEWORD(1,1),&data);      //Start Winsock
  
@@ -40,3 +39,7 @@ SOCKET createSocket(sockaddr_in &ser, char ip[15])
         return sock;        
        }
 
+void s_cl(char *a, int x)
+{
+    cout<<a;
+}
