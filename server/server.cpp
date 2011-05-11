@@ -9,6 +9,7 @@
 #include <winsock2.h>
 #include <string>
 #include <fstream>
+#include <sstream>
 #pragma comment(lib, "Ws2_32.lib")
 #define SERVER_PORT 2525
 #define OUR_DOMAIN "droptables.com"
@@ -125,11 +126,18 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 	//populate socket address struct for IP address later
 	getpeername(current_client, (SOCKADDR*)&cAddress, &len);
   // buffer to hold our recived data
-  char rcvbuf[100];
+  char rcvbuf[1000];
   // buffer to hold our sent data
   char sendData[100];
   // for error checking
   int res;
+  
+  //clear all buffers
+  for (int i = 0; i < 1000; i++)
+  {
+		rcvbuf[i]='\0';
+		sendData[i] ='\0';
+  }
 
    
    //LOGGING BEGIN
@@ -299,11 +307,141 @@ int sendMessage(sockaddr_in client, char messageLog[32])
 		getline(fin, msg[i]);
 	}
 	
-	string mailFrom = msg[2].substr((msg[2].find_first_of("@")+1));//get domain name
-	mailFrom = mailFrom.substr(0,(mailFrom.length()-1)); //truncate trailing ">"
+	int numRcpts = 0;
+	int numLocalRcpt = 0;
+	
+	for(int i = 3; i < cnt; i++) //Count number of rcpts.
+	{
+         if( msg[i].substr(0,7) == "RCPT TO"  )
+            numRcpts++;
+    }
 
-	if(mailFrom == OUR_DOMAIN)
-	cout << "yay\n";
+    bool myDomain = false; //set to true if any rcpt is OUR_DOMAIN
+    bool otherDomain = false;
+    for(int i = 0; i < numRcpts; i++) //check if any rcpts are for OUR_DOMAIN
+	{
+         if(  (msg[i+3].substr((msg[i+3].find_first_of("@")+1), 14)) == OUR_DOMAIN)//match domain name (start at @+1, go for 14 chars)
+         {
+            myDomain = true;
+            numLocalRcpt++;            
+         }
+         else 
+         {
+                otherDomain = true;//if there are other domains, we need to know.
+        
+         }
+    }
+//  cout << "numLocalRcpt: " << numLocalRcpt << endl;//DEBUGGING
+    string localRcpts[numLocalRcpt];//array for local users
+    
+    if(myDomain)//Create an array of local users to modify the save message log
+    {
+         int k = 0;
+          for(int i = 0; i < numRcpts; i++) //check if any rcpts are for OUR_DOMAIN
+         
+	    {
+             if(  (msg[i+3].substr((msg[i+3].find_first_of("@")+1), 14)) == OUR_DOMAIN)//match domain name (start at @+1, go for 14 chars)
+             {
+                localRcpts[k] = (msg[i+3].substr(9));
+                localRcpts[k]=localRcpts[k].substr(0,(localRcpts[k].length()-1));//truncate the final ">"
+                k++;
+             }
+        }
+   }
+    
+    
+    
+    
+    if(myDomain)//write out email to local user .eml file
+     {
+            for(int i = 0; i < numLocalRcpt; i++)
+            {
+                int id = GetCurrentThreadId();
+                std::stringstream ss;
+                ss << id;
+                ofstream fout;
+                string outputFile = localRcpts[i]; 
+                outputFile += "_";
+                outputFile+= ss.str();
+                outputFile += ".eml";//These lines create a new output .eml file for each user who is a RCPT on an email
+                fout.open(outputFile.c_str());
+                for(int k = 0; k < cnt; k++)
+                {
+                    fout << msg[k] << endl;
+                    k++;
+                }
+            }
+                
+            if(otherDomain)
+            {
+                    
+                SOCKET sock;
+                if((inet_ntoa(client.sin_addr)) != RSIDE)
+                {
+                
+                sockaddr_in ser;
+                sockaddr addr;
+              
+                ser.sin_family=AF_INET;
+                ser.sin_port=htons(2525);            //Set the port
+           
+                ser.sin_addr.s_addr=inet_addr(RSIDE.c_str()); //Set the address we want to connect to
+             
+                memcpy(&addr,&ser,sizeof(SOCKADDR_IN));
+                WSADATA data;
+                int res = WSAStartup(MAKEWORD(1,1),&data);      //Start Winsock
+         
+                if(res != 0)
+                    cout << "WSAStarup failed\n";
+         
+                sock=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);       //Create the socket
+                    if(sock==INVALID_SOCKET )
+                        cout << "INVALID SOCKET\n";
+                    else if(sock==SOCKET_ERROR)
+                        cout << "SOCKET ERROR\n";
+                    else
+                        cout<<"Socket Established"<<endl;//DEBUGGING
+            
+                res=connect(sock,&addr,sizeof(addr));               //Connect to the server
+                    if(res !=0 )
+                    {
+                        cout << "SERVER UNAVAILABLE - CHECK PORT\n";
+                    }
+                    else
+                    {
+                        cout<<"\nConnected to Server: ";
+                        memcpy(&ser,&addr,sizeof(SOCKADDR));
+                    }
+                }
+                for(int i = 0; i < cnt; i++)
+                {
+                       // char str;
+                        //str = msg[i].c_str();
+                        int res = send(sock,msg[i].c_str(),sizeof(msg[i].c_str()),0);
+                          //cout << "Sent message\n\n";
+                            if(res==0)
+                            { 
+                                //0==other side terminated conn
+                                printf("\nSERVER terminated connection\n");
+                                Sleep(40);
+                                closesocket(sock);
+                                break;
+                            }
+                            else if(res==SOCKET_ERROR)
+                            { 
+                                //-1 == send error
+                                printf("Socket error\n");
+                                Sleep(40);
+                                break;
+                            }
+                            char *RecvdData;
+                           int ret = recv(sock,RecvdData,sizeof(RecvdData),0);
+                }
+            }
+    }
+    
+    
+            
 	
 	
 	
