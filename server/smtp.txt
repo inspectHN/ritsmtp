@@ -1,0 +1,35 @@
+if message comes from local (COMPARE ON MAIL FROM)//DONE
+if dest == droptables. - store//DONE
+if des != droptables - send to RSIDE//DONE
+
+
+
+if message comes from LSIDE (COMPARE ON LSIDE)
+if dest == droptables. - store
+if dest != droptable. - send to RSIDE
+
+
+if message comes from RSIDE (COMPARE ON RSIDE)
+if dest == droptables. - store (COMPARE ON ALL DESTS)
+if any dest != droptables - send to LSIDE
+
+
+
+file format:
+CLIENT IP
+HELO
+MAIL FROM:
+RCPT TO:
+RCPT TO:
+RCPT TO:
+DATA
+send
+send
+send
+send
+send
+send
+send
+send
+.
+QUIT
