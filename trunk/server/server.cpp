@@ -148,7 +148,7 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
   
   //open master log file
   ofstream fout;
-  fout.open("connection_log.csv", fstream::app);
+  fout.open("connection_log.log", fstream::app);
   
   
   //Log the time of the connection
@@ -172,7 +172,7 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
   char ThrdID[16];
   strcpy(messageLog, "message_log_");
   strcat(messageLog, itoa(threadID, ThrdID, 10));
-  strcat(messageLog, ".csv");
+  strcat(messageLog, ".log");
   
   cout << "Message log name for thread " << threadID << ": " << messageLog << endl;
   fout.open(messageLog);
@@ -294,7 +294,6 @@ int sendMessage(sockaddr_in client, char messageLog[32])
 	while(!fin.eof())//loop to count total lines in the file
 	{
 		getline(fin, dummy);
-	//	cout << dummy << endl;
 		cnt++;
 	}
 	
@@ -317,7 +316,7 @@ int sendMessage(sockaddr_in client, char messageLog[32])
     }
 
     bool myDomain = false; //set to true if any rcpt is OUR_DOMAIN
-    bool otherDomain = false;
+    bool otherDomain = false; //set true if any rcpt is other domain
     for(int i = 0; i < numRcpts; i++) //check if any rcpts are for OUR_DOMAIN
 	{
          if(  (msg[i+3].substr((msg[i+3].find_first_of("@")+1), 14)) == OUR_DOMAIN)//match domain name (start at @+1, go for 14 chars)
@@ -357,12 +356,12 @@ int sendMessage(sockaddr_in client, char messageLog[32])
             for(int i = 0; i < numLocalRcpt; i++)
             {
                 int id = GetCurrentThreadId();
-                std::stringstream ss;
-                ss << id;
-                ofstream fout;
-                string outputFile = localRcpts[i]; 
+                std::stringstream ss;//create a stringstream object
+                ss << id;//put thread id into the stringstream
+                ofstream fout;//create output file stream
+                string outputFile = localRcpts[i];
                 outputFile += "_";
-                outputFile+= ss.str();
+                outputFile+= ss.str();//pull the id out of the stringstream object as a string.
                 outputFile += ".eml";//These lines create a new output .eml file for each user who is a RCPT on an email
                 fout.open(outputFile.c_str());
                 for(int k = 0; k < cnt; k++)
@@ -372,11 +371,11 @@ int sendMessage(sockaddr_in client, char messageLog[32])
                 }
             }
                 
-            if(otherDomain)
+            if(otherDomain)//if there is a rcpt to another domain as well, send it to the right side
             {
                     
                 SOCKET sock;
-                if((inet_ntoa(client.sin_addr)) != RSIDE)
+                if((inet_ntoa(client.sin_addr)) != RSIDE)//but only if it didn't come from the right side
                 {
                 
                 sockaddr_in ser;
@@ -409,16 +408,15 @@ int sendMessage(sockaddr_in client, char messageLog[32])
                     }
                     else
                     {
-                        cout<<"\nConnected to Server: ";
+                        cout<<"\nConnected to Server: " << RSIDE;
                         memcpy(&ser,&addr,sizeof(SOCKADDR));
                     }
                 }
                 for(int i = 0; i < cnt; i++)
                 {
-                       // char str;
-                        //str = msg[i].c_str();
-                        int res = send(sock,msg[i].c_str(),sizeof(msg[i].c_str()),0);
-                          //cout << "Sent message\n\n";
+                       
+                        int res = send(sock,msg[i].c_str(),sizeof(msg[i].c_str()),0);//send everything in the file line by line
+                          
                             if(res==0)
                             { 
                                 //0==other side terminated conn
@@ -435,8 +433,9 @@ int sendMessage(sockaddr_in client, char messageLog[32])
                                 break;
                             }
                             char *RecvdData;
-                           int ret = recv(sock,RecvdData,sizeof(RecvdData),0);
+                           int ret = recv(sock,RecvdData,sizeof(RecvdData),0);//recieve any data from the server as we send
                 }
+                cout << "message has been forwarded to the RSIDE server\n";
             }
     }
     
