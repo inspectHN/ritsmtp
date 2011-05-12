@@ -280,8 +280,9 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 
 int sendMessage(sockaddr_in client, char messageLog[32])
 {
-	ifstream fin; //open message log for reading
-	fin.open(messageLog);
+	ifstream fin; 
+	ofstream fout;//create output file stream
+	fin.open(messageLog);//open message log for reading
 	if(!fin.is_open())
 	{
 		cout << "error opening queued message: " << messageLog << ".  Check the file and try again.\n";
@@ -301,13 +302,20 @@ int sendMessage(sockaddr_in client, char messageLog[32])
 	fin.clear(); //clear the eof flag
 	fin.seekg(0);//reset file pointer to beginning
 	
-	for(int i = 0; i < cnt; i++)//loop to read in lines
+	for(int i = 0; i < cnt; i++)//loop to read in lines to msg array
 	{
 		getline(fin, msg[i]);
-	}
-	
+	}//The whole message is now in a local array
+	fin.close(); //close log file
 	int numRcpts = 0;
 	int numLocalRcpt = 0;
+	
+	bool fromMyDomain = false;//Find out if the from is our local domain
+	if(msg[2].substr(((msg[2].find_first_of("@")+1), 14)) == OUR_DOMAIN)
+	{
+		fromMyDomain = true;
+	}
+//	cout << "from domain is: " << fromMyDomain << endl << endl;//DEBUGGING
 	
 	for(int i = 3; i < cnt; i++) //Count number of rcpts.
 	{
@@ -315,25 +323,61 @@ int sendMessage(sockaddr_in client, char messageLog[32])
             numRcpts++;
     }
 
-    bool myDomain = false; //set to true if any rcpt is OUR_DOMAIN
-    bool otherDomain = false; //set true if any rcpt is other domain
+    bool toMyDomain = false; //set to true if any rcpt is OUR_DOMAIN
+    bool toOtherDomain = false; //set true if any rcpt is other domain
+    
+    cout << "array before: \n";
+    //TEMP
+    for(int i = 0; i < cnt; i++)
+    {
+		cout << msg[i] << endl;
+	}
+    
+    
     for(int i = 0; i < numRcpts; i++) //check if any rcpts are for OUR_DOMAIN
 	{
          if(  (msg[i+3].substr((msg[i+3].find_first_of("@")+1), 14)) == OUR_DOMAIN)//match domain name (start at @+1, go for 14 chars)
          {
-            myDomain = true;
-            numLocalRcpt++;            
+            toMyDomain = true;
+            numLocalRcpt++;   
+			msg[i+3] = " ";         
          }
          else 
          {
-                otherDomain = true;//if there are other domains, we need to know.
+                toOtherDomain = true;//if there are other domains, we need to know.
         
          }
+         
     }
-//  cout << "numLocalRcpt: " << numLocalRcpt << endl;//DEBUGGING
+    for (int i =0; i < cnt; i++)//remove "to" OUR_DOMAIN from array
+    {
+	
+		if(msg[i] == " ")
+		{
+			cout << "line is: " << msg[i];
+			msg[i] = msg[i+1];
+			msg[i+1] = "-1";
+			
+		
+		}
+		else
+		{
+			i++;
+		
+		}
+	}
+	 cnt -= numLocalRcpt;
+	 cout << "array after: \n";
+    //TEMP
+    for(int i = 0; i < cnt; i++)
+    {
+		cout << msg[i] << endl;
+	}
+		
+
     string localRcpts[numLocalRcpt];//array for local users
     
-    if(myDomain)//Create an array of local users to modify the save message log
+    if(toMyDomain)//Create an array of local users to modify the save message log
     {
          int k = 0;
           for(int i = 0; i < numRcpts; i++) //check if any rcpts are for OUR_DOMAIN
@@ -347,18 +391,19 @@ int sendMessage(sockaddr_in client, char messageLog[32])
              }
         }
    }
+ //Comparision 1:
+ //If it is from my domain, "deliver" local message, send other message to the right side server
     
-    
-    
-    
-    if(myDomain)//write out email to local user .eml file
+  if(fromMyDomain)
+  {
+    if(toMyDomain)//write out email to local user .eml file
      {
             for(int i = 0; i < numLocalRcpt; i++)
             {
                 int id = GetCurrentThreadId();
                 std::stringstream ss;//create a stringstream object
                 ss << id;//put thread id into the stringstream
-                ofstream fout;//create output file stream
+                
                 string outputFile = localRcpts[i];
                 outputFile += "_";
                 outputFile+= ss.str();//pull the id out of the stringstream object as a string.
@@ -369,13 +414,13 @@ int sendMessage(sockaddr_in client, char messageLog[32])
                     fout << msg[k] << endl;
                     k++;
                 }
+                fout.close();
             }
-                
-            if(otherDomain)//if there is a rcpt to another domain as well, send it to the right side
+    }//end toMyDomain        
+            if(toOtherDomain)//if there is a rcpt to another domain as well, send it to the right side
             {
                     
                 SOCKET sock;
-                if((inet_ntoa(client.sin_addr)) != RSIDE)//but only if it didn't come from the right side
                 {
                 
                 sockaddr_in ser;
@@ -436,9 +481,47 @@ int sendMessage(sockaddr_in client, char messageLog[32])
                            int ret = recv(sock,RecvdData,sizeof(RecvdData),0);//recieve any data from the server as we send
                 }
                 cout << "message has been forwarded to the RSIDE server\n";
-            }
-    }
+            }//end toOtherDomain
     
+	}//end fromMyDomain
+
+//COMPARISON 2:  
+//if message comes in from left, check rcpts, deliver to local, remove from list, forward out right side
+	if(inet_ntoa(client.sin_addr) == LSIDE)
+	{
+		
+		cout << "IN LEFT SIDE\n";
+		
+		if(toMyDomain)//write out email to local user .eml file
+     {
+            for(int i = 0; i < numLocalRcpt; i++)
+            {
+                int id = GetCurrentThreadId();
+                std::stringstream ss;//create a stringstream object
+                ss << id;//put thread id into the stringstream
+                
+                string outputFile = localRcpts[i];
+                outputFile += "_";
+                outputFile+= ss.str();//pull the id out of the stringstream object as a string.
+                outputFile += ".eml";//These lines create a new output .eml file for each user who is a RCPT on an email
+                fout.open(outputFile.c_str());
+                for(int k = 0; k < cnt; k++)
+                {
+                    fout << msg[k] << endl;
+                    k++;
+                }
+                fout.close();
+			}
+		
+		
+		
+		
+		
+		
+		
+		
+
+	
     
             
 	
@@ -446,7 +529,7 @@ int sendMessage(sockaddr_in client, char messageLog[32])
 	
 	
 	 
-     
-	
+	}
+	}	
 	return 0;
 }
