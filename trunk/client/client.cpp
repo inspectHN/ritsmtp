@@ -32,7 +32,7 @@ int main()
     
     while(1)
     {
-        //printMenu(); 
+        printMenu(); 
         cout<<"Enter IP to connect to: ";
         gets(ip);
         //fgets(ip,sizeof(ip),stdin);
@@ -68,20 +68,9 @@ int main()
                 cout<<"\nConnected to Server: ";
                 memcpy(&ser,&addr,sizeof(SOCKADDR));
             }
-     
-            recieveData(sock);
-     
-        //char RecvdData[100] = "";
-        //int ret;
-//    
-//        ret = recv(sock,RecvdData,sizeof(RecvdData),0);//First received message from server
-//            if(ret > 0)
-//            {
-//                cout<<endl<<RecvdData;
-//                strcpy(RecvdData,"");
-//	        }
- 
-       
+        
+            receiveData(sock);
+        
             char str[100] = "HELO ";
             
             strcpy(buf,"");
@@ -89,15 +78,18 @@ int main()
             fgets(buf,sizeof(buf),stdin);
             cout << "Before strcat\n\n";
             strcat(str, buf);          
-            //cout << str << endl << endl;
-            //sendData(sock, str);
-            //recieveData(sock);
+            cout << str << endl << endl;
+            
             Sleep(5);
             res = send(sock,str,sizeof(str),0);
-            //cout << "Sent message\n\n";
-          
+          //cout << "Sent message\n\n";
             error = errorCheck(res);
-            recieveData(sock);
+            receiveData(sock);
+            if(error==1)
+            {
+                 break;
+            }
+            // End of HELO message
             
             // Entering MAIL FROM:
             char from[100] = "MAIL FROM:<";
@@ -120,14 +112,16 @@ int main()
                  
             Sleep(5);
             res = send(sock,from,sizeof(from),0);
-          
-            error = errorCheck(res);  
-            recieveData(sock);
             
+            error = errorCheck(res);
+            receiveData(sock);
+            if(error==1)
+            {
+                 break;
+            }          
             // End of MAIL FROM
             
             // RCPT TO:
-			
             while(1)
             {
                 char rcpt[100] = "RCPT TO:<";
@@ -141,7 +135,7 @@ int main()
 				}
                 
                 // This portion doesn't make much sense, just do it.
-                		//same as above, replace newline with null
+                //same as above, replace newline with null
                 int len = strlen(buf);
                 buf[len-1] = '\0';
                 // Ending of non-sense
@@ -155,9 +149,12 @@ int main()
                 
                 Sleep(5);
                 res = send(sock,rcpt,sizeof(rcpt),0);
-          
                 error = errorCheck(res);
-                recieveData(sock);
+                receiveData(sock);
+                if(error==1)
+                {
+                     break;
+                }
                 
             } //END OF FIRST WHILE TRUE LOOP
             // Ending of RCPT TO while loop
@@ -167,10 +164,100 @@ int main()
                   
             Sleep(5);
             res = send(sock,DATA,sizeof(DATA),0);
-          
-            error = errorCheck(res);     
-            recieveData(sock);
-             
+            
+            error = errorCheck(res);
+            if(error==1)
+            {
+                 break;
+            }
+            receiveData(sock);
+            // End of sending the "DATA" command
+            
+            // Starting of entering From: for from field of email
+            char fromField[300] = "From:\"";
+            strcpy(buf,"");
+            cout<<"\nEnter the name of the person this message is from\n";
+            fgets(buf,sizeof(buf),stdin);
+            
+            // This portion doesn't make much sense, just do it.
+            //you have to append a null char in place of the newline char from fgets
+            len = strlen(buf);
+            buf[len-1] = '\0';
+            // Ending of non-sense
+            
+            strcat(fromField,buf);
+            strcat(fromField,"\" ");
+            
+            char arrow[200] = "<";
+            strcpy(buf,"");
+            cout<<"\nEnter the email address of the person this message is from\n";
+            fgets(buf,sizeof(buf),stdin);
+            
+            strcat(arrow,buf);
+            // This portion doesn't make much sense, just do it.
+            //you have to append a null char in place of the newline char from fgets
+            len = strlen(arrow);
+            arrow[len-1] = '\0';
+            // Ending of non-sense
+            // Another line of non-sense
+          //  strcat(from,"\n");
+            // Ending this line of non-sense
+            
+            strcat(arrow,">\n");
+            strcat(fromField,arrow);     
+            Sleep(5);
+            res = send(sock,fromField,sizeof(fromField),0);
+            error = errorCheck(res);
+            if(error==1)
+            {
+                 break;
+            }
+            receiveData(sock);
+            // End of From field (From:"name here" <email here>
+            
+            // Starting of entering To: for to field of email
+            char toField[300] = "To:\"";
+            strcpy(buf,"");
+            cout<<"\nEnter the name of the person this message is to\n";
+            fgets(buf,sizeof(buf),stdin);
+            
+            // This portion doesn't make much sense, just do it.
+            //you have to append a null char in place of the newline char from fgets
+            len = strlen(buf);
+            buf[len-1] = '\0';
+            // Ending of non-sense
+            
+            strcat(toField,buf);
+            strcat(toField,"\" ");
+            
+            char temp[200] = "<";
+            strcpy(buf,"");
+            cout<<"\nEnter the email address of the person this message is to\n";
+            fgets(buf,sizeof(buf),stdin);
+            
+            strcat(temp,buf);
+            // This portion doesn't make much sense, just do it.
+            //you have to append a null char in place of the newline char from fgets
+            len = strlen(temp);
+            temp[len-1] = '\0';
+            // Ending of non-sense
+            // Another line of non-sense
+          //  strcat(from,"\n");
+            // Ending this line of non-sense
+            
+            strcat(temp,">\n");
+            strcat(toField,temp);     
+            Sleep(5);
+            res = send(sock,toField,sizeof(toField),0);
+            error = errorCheck(res);
+            if(error==1)
+            {
+                 break;
+            }
+            receiveData(sock);
+            // End of To field (To:"name here" <email here>
+            
+            // Beginning of sending the message 
             strcpy(buf,"");
             cout<<"\nEnter message you wish to send.\nPlace DONE on a line by itself when you are finished\n";
             
@@ -192,14 +279,13 @@ int main()
                 cout << buf << endl;
                 Sleep(5);
                 res = send(sock,buf,sizeof(buf),0);
-                
                 error = errorCheck(res);
-                
+                if(error==1)
+                {
+                    break;
+                }
                 Sleep(5);
-                
-                recieveData(sock);
-                //cout << "ret is: " << ret << endl;
-                //cout <<"recv is: "<<RecvdData<<"(sbb)"<<endl;
+                receiveData(sock);    
 			}
             
             for(int i=0; i<1000; i++)
@@ -207,26 +293,28 @@ int main()
                 buf[i] = '\0';    
             }
 
-
             char *ending = ".\n";         
             Sleep(5);
             res = send(sock,ending,sizeof(ending),0);
-          
-            error = errorCheck(res);       
-            recieveData(sock);
+            error = errorCheck(res);
+            if(error==1)
+            {
+                 break;
+            }
+            receiveData(sock);
             
             strcpy(buf,"");
             strcpy(buf,"QUIT\n");
             res = send(sock,buf,sizeof(buf),0);
-                
-            error = errorCheck(res);      
-            recieveData(sock);
+            error = errorCheck(res);
+            if(error==1)
+            {
+                 break;
+            }
+            receiveData(sock);   
             // Done sending message
           
-     
         closesocket(client);
         WSACleanup();
     }
 }
-
-
