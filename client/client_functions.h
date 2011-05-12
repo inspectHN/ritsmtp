@@ -7,5 +7,5 @@ using namespace std;
 // Prints menu and gets choice
 void printMenu();
 void sendData(SOCKET, char*);
-void recieveData(SOCKET);
+void receiveData(SOCKET);
 int errorCheck(int);

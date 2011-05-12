@@ -39,7 +39,7 @@ void sendData(SOCKET sock, char* str)
          }
  }
  
- void recieveData(SOCKET sock)
+ void receiveData(SOCKET sock)
  {
       int ret;
       char RecvdData[100] = "";
