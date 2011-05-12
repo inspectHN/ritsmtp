@@ -33,6 +33,7 @@ int main()
     while(1)
     {
         printMenu(); 
+        cin.ignore();
         cout<<"Enter IP to connect to: ";
         gets(ip);
         //fgets(ip,sizeof(ip),stdin);
@@ -216,46 +217,145 @@ int main()
             // End of From field (From:"name here" <email here>
             
             // Starting of entering To: for to field of email
-            char toField[300] = "To:\"";
+            while(1)
+            {
+                char toField[300] = "To:\"";
+                strcpy(buf,"");
+                cout<<"\nEnter the name of the person this message is to. Enter blank line when done\n";
+                fgets(buf,sizeof(buf),stdin);
+            
+                if(strlen(buf) == 1)
+                {
+                      break;                    
+                }
+                
+                // This portion doesn't make much sense, just do it.
+                //you have to append a null char in place of the newline char from fgets
+                len = strlen(buf);
+                buf[len-1] = '\0';
+                // Ending of non-sense
+                
+                strcat(toField,buf);
+                strcat(toField,"\" ");
+                
+                char temp[200] = "<";
+                strcpy(buf,"");
+                cout<<"\nEnter the email address of the person this message is to\n";
+                fgets(buf,sizeof(buf),stdin);
+                
+                strcat(temp,buf);
+                // This portion doesn't make much sense, just do it.
+                //you have to append a null char in place of the newline char from fgets
+                len = strlen(temp);
+                temp[len-1] = '\0';
+                // Ending of non-sense
+                // Another line of non-sense
+              //  strcat(from,"\n");
+                // Ending this line of non-sense
+                
+                strcat(temp,">\n");
+                strcat(toField,temp);     
+                Sleep(5);
+                res = send(sock,toField,sizeof(toField),0);
+                error = errorCheck(res);
+                if(error==1)
+                {
+                     break;
+                }
+                receiveData(sock);
+            }
+            // End of To field (To:"name here" <email here>
+            
+            // Starting of entering CC: for to field of email
+            while(1)
+            {
+                char ccField[300] = "Cc:\"";
+                strcpy(buf,"");
+                cout<<"\nEnter the name of the person to Cc. Enter blank line when done\n";
+                fgets(buf,sizeof(buf),stdin);
+            
+                if(strlen(buf) == 1)
+                {
+                      break;                    
+                }
+                
+                // This portion doesn't make much sense, just do it.
+                //you have to append a null char in place of the newline char from fgets
+                len = strlen(buf);
+                buf[len-1] = '\0';
+                // Ending of non-sense
+                
+                strcat(ccField,buf);
+                strcat(ccField,"\" ");
+                
+                char temp[200] = "<";
+                strcpy(buf,"");
+                cout<<"\nEnter the email address of the person to Cc\n";
+                fgets(buf,sizeof(buf),stdin);
+                
+                strcat(temp,buf);
+                // This portion doesn't make much sense, just do it.
+                //you have to append a null char in place of the newline char from fgets
+                len = strlen(temp);
+                temp[len-1] = '\0';
+                // Ending of non-sense
+                // Another line of non-sense
+              //  strcat(from,"\n");
+                // Ending this line of non-sense
+                
+                strcat(temp,">\n");
+                strcat(ccField,temp);     
+                Sleep(5);
+                res = send(sock,ccField,sizeof(ccField),0);
+                error = errorCheck(res);
+                if(error==1)
+                {
+                     break;
+                }
+                receiveData(sock);
+            }
+            // End of CC field (To:"name here" <email here>
+            
+            // Starting of entering Date
+            char date[300] = "Date: ";
             strcpy(buf,"");
-            cout<<"\nEnter the name of the person this message is to\n";
+            cout<<"\nEnter the date. Leave blank for no date\n";
             fgets(buf,sizeof(buf),stdin);
-            
-            // This portion doesn't make much sense, just do it.
-            //you have to append a null char in place of the newline char from fgets
-            len = strlen(buf);
-            buf[len-1] = '\0';
-            // Ending of non-sense
-            
-            strcat(toField,buf);
-            strcat(toField,"\" ");
-            
-            char temp[200] = "<";
-            strcpy(buf,"");
-            cout<<"\nEnter the email address of the person this message is to\n";
-            fgets(buf,sizeof(buf),stdin);
-            
-            strcat(temp,buf);
-            // This portion doesn't make much sense, just do it.
-            //you have to append a null char in place of the newline char from fgets
-            len = strlen(temp);
-            temp[len-1] = '\0';
-            // Ending of non-sense
-            // Another line of non-sense
-          //  strcat(from,"\n");
-            // Ending this line of non-sense
-            
-            strcat(temp,">\n");
-            strcat(toField,temp);     
+
+            if(strlen(date)==1)
+            {
+                    break;
+            }
+
+            strcat(date,buf);
+               
             Sleep(5);
-            res = send(sock,toField,sizeof(toField),0);
+            res = send(sock,date,sizeof(date),0);
             error = errorCheck(res);
             if(error==1)
             {
                  break;
             }
             receiveData(sock);
-            // End of To field (To:"name here" <email here>
+            // End of Subject field 
+            
+            // Starting of entering Subject
+            char subject[300] = "Subject: ";
+            strcpy(buf,"");
+            cout<<"\nEnter message subject\n";
+            fgets(buf,sizeof(buf),stdin);
+
+            strcat(subject,buf);
+               
+            Sleep(5);
+            res = send(sock,subject,sizeof(subject),0);
+            error = errorCheck(res);
+            if(error==1)
+            {
+                 break;
+            }
+            receiveData(sock);
+            // End of Subject field            
             
             // Beginning of sending the message 
             strcpy(buf,"");
