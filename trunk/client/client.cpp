@@ -22,7 +22,7 @@ int main()
 {     
     //Declarations
     DWORD poll;
-    int res,i=1,port=999;
+    int res,i=1,port=999,error;
     char buf[1000];
     //char msg[100] = "";
     char ip[15];
@@ -69,15 +69,17 @@ int main()
                 memcpy(&ser,&addr,sizeof(SOCKADDR));
             }
      
-        char RecvdData[100] = "";
-        int ret;
-    
-        ret = recv(sock,RecvdData,sizeof(RecvdData),0);//First received message from server
-            if(ret > 0)
-            {
-                cout<<endl<<RecvdData;
-                strcpy(RecvdData,"");
-	        }
+            recieveData(sock);
+     
+        //char RecvdData[100] = "";
+        //int ret;
+//    
+//        ret = recv(sock,RecvdData,sizeof(RecvdData),0);//First received message from server
+//            if(ret > 0)
+//            {
+//                cout<<endl<<RecvdData;
+//                strcpy(RecvdData,"");
+//	        }
  
        
             char str[100] = "HELO ";
@@ -87,34 +89,15 @@ int main()
             fgets(buf,sizeof(buf),stdin);
             cout << "Before strcat\n\n";
             strcat(str, buf);          
-            cout << str << endl << endl;
-            
+            //cout << str << endl << endl;
+            //sendData(sock, str);
+            //recieveData(sock);
             Sleep(5);
             res = send(sock,str,sizeof(str),0);
-          //cout << "Sent message\n\n";
-            if(res==0)
-            { 
-                //0==other side terminated conn
-                printf("\nSERVER terminated connection\n");
-                Sleep(40);
-                closesocket(client);
-                client = 0;
-                break;
-            }
-            else if(res==SOCKET_ERROR)
-            { 
-                //-1 == send error
-                printf("Socket error\n");
-                Sleep(40);
-                break;
-            }
-        
-            ret = recv(sock,RecvdData,sizeof(RecvdData),0);
-            if(ret > 0)
-            {
-                cout<<endl<<RecvdData;
-                strcpy(RecvdData,"");
-            }
+            //cout << "Sent message\n\n";
+          
+            error = errorCheck(res);
+            recieveData(sock);
             
             // Entering MAIL FROM:
             char from[100] = "MAIL FROM:<";
@@ -138,29 +121,9 @@ int main()
             Sleep(5);
             res = send(sock,from,sizeof(from),0);
           
-            if(res==0)
-            { 
-                //0==other side terminated conn
-                printf("\nSERVER terminated connection\n");
-                Sleep(40);
-                closesocket(client);
-                client = 0;
-                break;
-            }
-            else if(res==SOCKET_ERROR)
-            { 
-                //-1 == send error
-                printf("Socket error\n");
-                Sleep(40);
-                break;
-            }
+            error = errorCheck(res);  
+            recieveData(sock);
             
-            ret = recv(sock,RecvdData,sizeof(RecvdData),0);
-            if(ret > 0)
-            {
-                cout<<endl<<RecvdData;
-                strcpy(RecvdData,"");
-            }
             // End of MAIL FROM
             
             // RCPT TO:
@@ -193,29 +156,9 @@ int main()
                 Sleep(5);
                 res = send(sock,rcpt,sizeof(rcpt),0);
           
-                if(res==0)
-                { 
-                    //0==other side terminated conn
-                    printf("\nSERVER terminated connection\n");
-                    Sleep(40);
-                    closesocket(client);
-                    client = 0;
-                    break;
-                }
-                else if(res==SOCKET_ERROR)
-                { 
-                    //-1 == send error
-                    printf("Socket error\n");
-                    Sleep(40);
-                    break;
-                }
-        
-                ret = recv(sock,RecvdData,sizeof(RecvdData),0);
-                if(ret > 0)
-                {
-                    cout<<endl<<RecvdData;
-                    strcpy(RecvdData,"");
-                }
+                error = errorCheck(res);
+                recieveData(sock);
+                
             } //END OF FIRST WHILE TRUE LOOP
             // Ending of RCPT TO while loop
             
@@ -225,26 +168,8 @@ int main()
             Sleep(5);
             res = send(sock,DATA,sizeof(DATA),0);
           
-                if(res==0)
-                { 
-                    //0==other side terminated conn
-                    printf("\nSERVER terminated connection\n");
-                    Sleep(40);
-                    closesocket(client);
-                    client = 0;
-                    break;
-                }
-                else if(res==SOCKET_ERROR)
-                { 
-                    //-1 == send error
-                    printf("Socket error\n");
-                    Sleep(40);
-                    break;
-                }
-        
-                ret = recv(sock,RecvdData,sizeof(RecvdData),0);
-                cout<<endl<<RecvdData;
-                strcpy(RecvdData,"");
+            error = errorCheck(res);     
+            recieveData(sock);
              
             strcpy(buf,"");
             cout<<"\nEnter message you wish to send.\nPlace DONE on a line by itself when you are finished\n";
@@ -268,27 +193,13 @@ int main()
                 Sleep(5);
                 res = send(sock,buf,sizeof(buf),0);
                 
-                if(res==0)
-                { 
-                    //0==other side terminated conn
-                    printf("\nSERVER terminated connection\n");
-                    Sleep(40);
-                    closesocket(client);
-                    client = 0;
-                    break;
-                }
-                else if(res==SOCKET_ERROR)
-                { 
-                    //-1 == send error
-                    printf("Socket error\n");
-                    Sleep(40);
-                    break;
-                }
+                error = errorCheck(res);
+                
                 Sleep(5);
                 
-                ret = recv(sock,RecvdData,sizeof(RecvdData),0);
-                cout << "ret is: " << ret << endl;
-                cout <<"recv is: "<<RecvdData<<"(sbb)"<<endl;
+                recieveData(sock);
+                //cout << "ret is: " << ret << endl;
+                //cout <<"recv is: "<<RecvdData<<"(sbb)"<<endl;
 			}
             
             for(int i=0; i<1000; i++)
@@ -301,51 +212,15 @@ int main()
             Sleep(5);
             res = send(sock,ending,sizeof(ending),0);
           
-            if(res==0)
-            { 
-                //0==other side terminated conn
-                printf("\nSERVER terminated connection\n");
-                Sleep(40);
-                closesocket(client);
-                client = 0;
-                break;
-            }
-            else if(res==SOCKET_ERROR)
-            { 
-                //-1 == send error
-                printf("Socket error\n");
-                Sleep(40);
-                break;
-            }
-       
-            ret = recv(sock,RecvdData,sizeof(RecvdData),0);
-            if(ret > 0)
-            {
-                cout<<endl<<RecvdData << endl;
-                strcpy(RecvdData,"");
-            }
+            error = errorCheck(res);       
+            recieveData(sock);
+            
             strcpy(buf,"");
             strcpy(buf,"QUIT\n");
             res = send(sock,buf,sizeof(buf),0);
                 
-                if(res==0)
-                { 
-                    //0==other side terminated conn
-                    printf("\nSERVER terminated connection\n");
-                    Sleep(40);
-                    closesocket(client);
-                    client = 0;
-                    break;
-                }
-                else if(res==SOCKET_ERROR)
-                { 
-                    //-1 == send error
-                    printf("Socket error\n");
-                    Sleep(40);
-                    break;
-                }
-            ret = recv(sock,RecvdData,sizeof(RecvdData),0);
-            cout << endl << RecvdData << endl;
+            error = errorCheck(res);      
+            recieveData(sock);
             // Done sending message
           
      
@@ -353,3 +228,5 @@ int main()
         WSACleanup();
     }
 }
+
+
