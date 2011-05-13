@@ -236,7 +236,7 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 			sendMessage(cAddress, messageLog); //STILL IN PROGRESS
 			ExitThread(0);
 		}
-		if((strncmp(rcvmsg,"DATA",5) == 0))
+		if((strncmp(rcvmsg,"DATA\r\n",5) == 0))
 		{
 			
 			strcpy(sendData,"354 End data with <CR><LF>.<CR><LF>");
@@ -249,8 +249,9 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 			while(check != 0)
 			{	
 			res = recv(current_client,rcvbuf,sizeof(rcvbuf),0);
-			rcvbuf[(strlen(rcvbuf))-1]='\0'; //remove newline char from end and replace it with a null char						
-			check = strcmp(rcvbuf, ".");			
+		//	rcvbuf[(strlen(rcvbuf))-1]='\0'; //remove newline char from end and replace it with a null char						
+			cout << "rcvbuf: " << rcvbuf << endl;
+			check = strncmp(rcvbuf, "\r\n.\r\n",1);			
 	
 			
 			fout << endl << rcvbuf;
@@ -307,6 +308,8 @@ int sendMessage(sockaddr_in client, char messageLog[32])
 		getline(fin, msg[i]);
 	}//The whole message is now in a local array
 	fin.close(); //close log file
+	
+	
 	int numRcpts = 0;
 	int numLocalRcpt = 0;
 	
@@ -326,12 +329,7 @@ int sendMessage(sockaddr_in client, char messageLog[32])
     bool toMyDomain = false; //set to true if any rcpt is OUR_DOMAIN
     bool toOtherDomain = false; //set true if any rcpt is other domain
     
-    cout << "array before: \n";
-    //TEMP
-    for(int i = 0; i < cnt; i++)
-    {
-		cout << msg[i] << endl;
-	}
+    
     
     
     for(int i = 0; i < numRcpts; i++) //check if any rcpts are for OUR_DOMAIN
@@ -349,14 +347,30 @@ int sendMessage(sockaddr_in client, char messageLog[32])
          }
          
     }
+    
+    
+    cout << "array before: \n";
+    //TEMP
+    for(int i = 0; i < cnt; i++)
+    {
+		cout << msg[i] << endl;
+	}
+    
+    string msg1[cnt-numLocalRcpt];
+   // int cnt1++;
+    
     for (int i =0; i < cnt; i++)//remove "to" OUR_DOMAIN from array
     {
-	
+		if(msg[i] != " "){
+			msg1[i]=msg[i];
+		}
 		if(msg[i] == " ")
 		{
-			cout << "line is: " << msg[i];
-			msg[i] = msg[i+1];
-			msg[i+1] = "-1";
+			
+			cout << " line is: " << msg[i] << endl;
+			msg1[i] = msg[i+1];
+			cout << "msg1: " << msg1[i] << endl;
+			//cnt1++;
 			
 		
 		}
@@ -366,7 +380,8 @@ int sendMessage(sockaddr_in client, char messageLog[32])
 		
 		}
 	}
-	 cnt -= numLocalRcpt;
+
+	// cnt -= numLocalRcpt;
 	 cout << "array after: \n";
     //TEMP
     for(int i = 0; i < cnt; i++)
@@ -492,6 +507,7 @@ int sendMessage(sockaddr_in client, char messageLog[32])
 		
 		cout << "IN LEFT SIDE\n";
 		
+		
 		if(toMyDomain)//write out email to local user .eml file
      {
             for(int i = 0; i < numLocalRcpt; i++)
@@ -512,24 +528,171 @@ int sendMessage(sockaddr_in client, char messageLog[32])
                 }
                 fout.close();
 			}
-		
-		
-		
-		
-		
-		
-		
-		
-
-	
-    
+    }//END TO MY DOMAIN
+		if(toOtherDomain)//if there is a rcpt to another domain as well, send it to the right side
+            {
+                    
+                SOCKET sock;
+                {
+                
+                sockaddr_in ser;
+                sockaddr addr;
+              
+                ser.sin_family=AF_INET;
+                ser.sin_port=htons(2525);            //Set the port
+           
+                ser.sin_addr.s_addr=inet_addr(RSIDE.c_str()); //Set the address we want to connect to
+             
+                memcpy(&addr,&ser,sizeof(SOCKADDR_IN));
+                WSADATA data;
+                int res = WSAStartup(MAKEWORD(1,1),&data);      //Start Winsock
+         
+                if(res != 0)
+                    cout << "WSAStarup failed\n";
+         
+                sock=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);       //Create the socket
+                    if(sock==INVALID_SOCKET )
+                        cout << "INVALID SOCKET\n";
+                    else if(sock==SOCKET_ERROR)
+                        cout << "SOCKET ERROR\n";
+                    else
+                        cout<<"Socket Established"<<endl;//DEBUGGING
             
+                res=connect(sock,&addr,sizeof(addr));               //Connect to the server
+                    if(res !=0 )
+                    {
+                        cout << "SERVER UNAVAILABLE - CHECK PORT\n";
+                    }
+                    else
+                    {
+                        cout<<"\nConnected to Server: " << RSIDE;
+                        memcpy(&ser,&addr,sizeof(SOCKADDR));
+                    }
+                }
+                for(int i = 0; i < cnt; i++)
+                {
+                       
+                        int res = send(sock,msg[i].c_str(),sizeof(msg[i].c_str()),0);//send everything in the file line by line
+                          
+                            if(res==0)
+                            { 
+                                //0==other side terminated conn
+                                printf("\nSERVER terminated connection\n");
+                                Sleep(40);
+                                closesocket(sock);
+                                break;
+                            }
+                            else if(res==SOCKET_ERROR)
+                            { 
+                                //-1 == send error
+                                printf("Socket error\n");
+                                Sleep(40);
+                                break;
+                            }
+                            char *RecvdData;
+                           int ret = recv(sock,RecvdData,sizeof(RecvdData),0);//recieve any data from the server as we send
+                }
+                cout << "message has been forwarded to the RSIDE server\n";
+            }//end toOtherDomain
+
+	}	//END TO LSIDE
 	
 	
-	
-	
-	 
-	}
-	}	
+	//COMPARISON 3:  
+//if message comes in from right, check rcpts, deliver to local, remove from list, forward out left side
+	if(inet_ntoa(client.sin_addr) == RSIDE)
+	{
+		
+		cout << "IN RIGHT SIDE\n";
+		
+		
+		if(toMyDomain)//write out email to local user .eml file
+     {
+            for(int i = 0; i < numLocalRcpt; i++)
+            {
+                int id = GetCurrentThreadId();
+                std::stringstream ss;//create a stringstream object
+                ss << id;//put thread id into the stringstream
+                
+                string outputFile = localRcpts[i];
+                outputFile += "_";
+                outputFile+= ss.str();//pull the id out of the stringstream object as a string.
+                outputFile += ".eml";//These lines create a new output .eml file for each user who is a RCPT on an email
+                fout.open(outputFile.c_str());
+                for(int k = 0; k < cnt; k++)
+                {
+                    fout << msg[k] << endl;
+                    k++;
+                }
+                fout.close();
+			}
+    }//END TO MY DOMAIN
+		if(toOtherDomain)//if there is a rcpt to another domain as well, send it to the right side
+            {
+                    
+                SOCKET sock;
+                {
+                
+                sockaddr_in ser;
+                sockaddr addr;
+              
+                ser.sin_family=AF_INET;
+                ser.sin_port=htons(2525);            //Set the port
+           
+                ser.sin_addr.s_addr=inet_addr(LSIDE.c_str()); //Set the address we want to connect to
+             
+                memcpy(&addr,&ser,sizeof(SOCKADDR_IN));
+                WSADATA data;
+                int res = WSAStartup(MAKEWORD(1,1),&data);      //Start Winsock
+         
+                if(res != 0)
+                    cout << "WSAStarup failed\n";
+         
+                sock=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);       //Create the socket
+                    if(sock==INVALID_SOCKET )
+                        cout << "INVALID SOCKET\n";
+                    else if(sock==SOCKET_ERROR)
+                        cout << "SOCKET ERROR\n";
+                    else
+                        cout<<"Socket Established"<<endl;//DEBUGGING
+            
+                res=connect(sock,&addr,sizeof(addr));               //Connect to the server
+                    if(res !=0 )
+                    {
+                        cout << "SERVER UNAVAILABLE - CHECK PORT\n";
+                    }
+                    else
+                    {
+                        cout<<"\nConnected to Server: " << LSIDE;
+                        memcpy(&ser,&addr,sizeof(SOCKADDR));
+                    }
+                }
+                for(int i = 0; i < cnt; i++)
+                {
+                       
+                        int res = send(sock,msg[i].c_str(),sizeof(msg[i].c_str()),0);//send everything in the file line by line
+                          
+                            if(res==0)
+                            { 
+                                //0==other side terminated conn
+                                printf("\nSERVER terminated connection\n");
+                                Sleep(40);
+                                closesocket(sock);
+                                break;
+                            }
+                            else if(res==SOCKET_ERROR)
+                            { 
+                                //-1 == send error
+                                printf("Socket error\n");
+                                Sleep(40);
+                                break;
+                            }
+                            char *RecvdData;
+                           int ret = recv(sock,RecvdData,sizeof(RecvdData),0);//recieve any data from the server as we send
+                }
+                cout << "message has been forwarded to the RSIDE server\n";
+            }//end toOtherDomain
+
+	}	//END TO RSIDE
 	return 0;
 }
