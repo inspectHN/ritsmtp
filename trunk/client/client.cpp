@@ -77,9 +77,8 @@ int main()
             strcpy(buf,"");
             cout<<"\nEnter hostname\n";
             fgets(buf,sizeof(buf),stdin);
-            cout << "Before strcat\n\n";
+
             strcat(str, buf);          
-            cout << str << endl << endl;
             
             Sleep(5);
             res = send(sock,str,sizeof(str),0);
@@ -376,7 +375,6 @@ int main()
                     strcat(buf,"..\n");
                 }
                 
-                cout << buf << endl;
                 Sleep(5);
                 res = send(sock,buf,sizeof(buf),0);
                 error = errorCheck(res);
@@ -412,7 +410,7 @@ int main()
                  break;
             }
             receiveData(sock);
-            cout << "\n";   
+            cout << "\n\n";   
             // Done sending message
           
         closesocket(client);
