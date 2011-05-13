@@ -212,7 +212,7 @@ int main()
             {
                  break;
             }
-            receiveData(sock);
+            //receiveData(sock);
             // End of From field (From:"name here" <email here>
             
             // Starting of entering To: for to field of email
@@ -261,7 +261,7 @@ int main()
                 {
                      break;
                 }
-                receiveData(sock);
+                //receiveData(sock);
             }
             // End of To field (To:"name here" <email here>
             
@@ -311,7 +311,7 @@ int main()
                 {
                      break;
                 }
-                receiveData(sock);
+                //receiveData(sock);
             }
             // End of CC field (To:"name here" <email here>
             
@@ -335,7 +335,7 @@ int main()
             {
                  break;
             }
-            receiveData(sock);
+            //receiveData(sock);
             // End of Subject field 
             
             // Starting of entering Subject
@@ -353,7 +353,7 @@ int main()
             {
                  break;
             }
-            receiveData(sock);
+            //receiveData(sock);
             // End of Subject field            
             
             // Beginning of sending the message 
@@ -362,6 +362,7 @@ int main()
             
             while(1)
             {
+                strcpy(buf,"");  
                 cout << "--> ";
                 fgets(buf,sizeof(buf),stdin);
                 
@@ -383,7 +384,7 @@ int main()
                     break;
                 }
                 Sleep(5);
-                receiveData(sock);    
+                //receiveData(sock);    
 			}
             
             for(int i=0; i<1000; i++)
@@ -402,7 +403,7 @@ int main()
             receiveData(sock);
             
             strcpy(buf,"");
-            strcpy(buf,"QUIT\n");
+            strcpy(buf,"QUIT\r\n");
             res = send(sock,buf,sizeof(buf),0);
             error = errorCheck(res);
             if(error==1)
