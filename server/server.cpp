@@ -24,6 +24,7 @@ using namespace std;
 //GLOBAL VARIABLES FOR IP ADDRESS
 string LSIDE;
 string RSIDE;
+bool ourClient = true;
  
 int main(int argc, char *argv[])
 {
@@ -228,7 +229,7 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 		}
 
 			
-			if((strcmp(rcvmsg,"QUIT") == 0))
+			if((strncmp(rcvmsg,"QUIT\r\n",5) == 0))
 		{
 			strcpy(sendData,"221 Bye");
 			send(current_client,sendData,sizeof(sendData),0);
@@ -238,7 +239,11 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 		}
 		if((strncmp(rcvmsg,"DATA\r\n",5) == 0))
 		{
-			
+			char message[1000];
+			for(int i = 0; i < 1000; i++)
+			{
+				strcpy(message,"\0");
+			}
 			strcpy(sendData,"354 End data with <CR><LF>.<CR><LF>");
 			send(current_client,sendData,sizeof(sendData),0);
 			strcpy(sendData,"");
@@ -246,19 +251,27 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 			
 			int check = 1;
 	 		
-			while(check != 0)
+			while(true)
 			{	
-			res = recv(current_client,rcvbuf,sizeof(rcvbuf),0);
-		//	rcvbuf[(strlen(rcvbuf))-1]='\0'; //remove newline char from end and replace it with a null char						
-			cout << "rcvbuf: " << rcvbuf << endl;
-			check = strncmp(rcvbuf, "\r\n.\r\n",1);			
+				
+				for(int i = 0; i < 1000; i++)
+			{
+				strcpy(message,"\0");
+			}
+			
+			res = recv(current_client,message,sizeof(message),0);
+			cout << "res: " << res << endl;
+			//rcvbuf[(strlen(message))-1]='\0'; //remove newline char from end and replace it with a null char						
+			cout << "rcvbuf: " << message << endl;
+			check = strncmp(message, "\r\n.\r\n",1);			
 	
+			fout << endl << message;
 			
-			fout << endl << rcvbuf;
-			
-			
-			if(check != 0)
-				send(current_client,sendData,sizeof(sendData),0);
+		//	if(check != 0){
+		//	strcpy(sendData, "");
+		//	send(current_client,sendData,sizeof(sendData),0);
+		//	}
+		
 						
 			if(check == 0)
 				{
@@ -269,6 +282,7 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 					strncpy(sendData,"250 Ok: Queued as ",18);
 					strcat(sendData, itoa(threadID, ThrdID, 10));
 					send(current_client,sendData,sizeof(sendData),0);
+					break;
 					
 				}
       	  }
@@ -349,49 +363,49 @@ int sendMessage(sockaddr_in client, char messageLog[32])
     }
     
     
-    cout << "array before: \n";
-    //TEMP
-    for(int i = 0; i < cnt; i++)
-    {
-		cout << msg[i] << endl;
-	}
-    
-    string msg1[cnt-numLocalRcpt];
+  //  cout << "array before: \n";
+//    //TEMP
+//    for(int i = 0; i < cnt; i++)
+//    {
+//		cout << msg[i] << endl;
+//	}
+//    
+  //  string msg1[cnt-numLocalRcpt];
    // int cnt1++;
     
-    for (int i =0; i < cnt; i++)//remove "to" OUR_DOMAIN from array
-    {
-		if(msg[i] != " "){
-			msg1[i]=msg[i];
-		}
-		if(msg[i] == " ")
-		{
-			
-			cout << " line is: " << msg[i] << endl;
-			msg1[i] = msg[i+1];
-			cout << "msg1: " << msg1[i] << endl;
-			//cnt1++;
-			
-		
-		}
-		else
-		{
-			i++;
-		
-		}
-	}
+   // for (int i =0; i < cnt; i++)//remove "to" OUR_DOMAIN from array
+//    {
+//		if(msg[i] != " "){
+//			msg1[i]=msg[i];
+//		}
+//		if(msg[i] == " ")
+//		{
+//			
+//			cout << " line is: " << msg[i] << endl;
+//			msg1[i] = msg[i+1];
+//			cout << "msg1: " << msg1[i] << endl;
+//			//cnt1++;
+//			
+//		
+//		}
+//		else
+//		{
+//			i++;
+//		
+//		}
+//	}
 
 	// cnt -= numLocalRcpt;
-	 cout << "array after: \n";
-    //TEMP
-    for(int i = 0; i < cnt; i++)
-    {
-		cout << msg[i] << endl;
-	}
-		
-
+//	 cout << "array after: \n";
+//    //TEMP
+//    for(int i = 0; i < cnt; i++)
+//    {
+//		cout << msg[i] << endl;
+//	}
+//		
+//
     string localRcpts[numLocalRcpt];//array for local users
-    
+//    
     if(toMyDomain)//Create an array of local users to modify the save message log
     {
          int k = 0;
