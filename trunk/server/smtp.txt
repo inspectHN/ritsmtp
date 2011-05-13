@@ -2,16 +2,20 @@ if message comes from local (COMPARE ON MAIL FROM)//DONE
 if dest == droptables. - store//DONE
 if dest != droptables - send to RSIDE//DONE
 
+----------------------------
 
 
-if message comes from LSIDE (COMPARE ON LSIDE)
-if any dest == droptables. - store
-if any dest != droptable. - send to RSIDE
+
+if message comes from LSIDE (COMPARE ON LSIDE)//done
+if any dest == droptables. - store//done
+if any dest != droptable. - send to RSIDE//done
 
 
-if message comes from RSIDE (COMPARE ON RSIDE)
-if any dest == droptables. - store (COMPARE ON ALL DESTS)
-if any dest != droptables - send to LSIDE
+
+
+if message comes from RSIDE (COMPARE ON RSIDE)//done
+if any dest == droptables. - store (COMPARE ON ALL DESTS)//done
+if any dest != droptables - send to LSIDE//done
 
 
 
