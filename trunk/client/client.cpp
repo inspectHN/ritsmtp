@@ -161,7 +161,7 @@ int main()
             // Ending of RCPT TO while loop
             
             // Send "DATA" message to server
-            char DATA[10] = "DATA\n";
+            char DATA[10] = "DATA\r\n";
                   
             Sleep(5);
             res = send(sock,DATA,sizeof(DATA),0);
@@ -393,7 +393,7 @@ int main()
                 buf[i] = '\0';    
             }
 
-            char *ending = ".\n";         
+            char *ending = "\r\n.\r\n";         
             Sleep(5);
             res = send(sock,ending,sizeof(ending),0);
             error = errorCheck(res);
@@ -411,7 +411,8 @@ int main()
             {
                  break;
             }
-            receiveData(sock);   
+            receiveData(sock);
+            cout << "\n";   
             // Done sending message
           
         closesocket(client);
