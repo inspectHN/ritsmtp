@@ -134,10 +134,10 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
   int res;
   
   //clear all buffers
-  for (int i = 0; i < 1000; i++)
+  for (int i = 0; i < sizeof(rcvbuf); i++)
   {
 		rcvbuf[i]='\0';
-		sendData[i] ='\0';
+		sendData[i]='\0';
   }
 
    
@@ -180,37 +180,35 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
   
   
   strcpy(sendData,"220 smtp.droptables.com\n");
-  //cout << strlen(sendData) << "\n";
   send(current_client,sendData,strlen(sendData),0);
   fout << inet_ntoa(cAddress.sin_addr);
+ 
   // our recv loop
   while(true)
   {
-	 
+	  for (int k = 0; k < sizeof(rcvbuf); k++)
+   	 {
+			rcvbuf[k]='\0';
+		
+	 }  //EMPTY "RECIEVED BUFFER"
      res = recv(current_client,rcvbuf,sizeof(rcvbuf),0); // recv cmds
-	 char rcvmsg[(strlen(rcvbuf)-1)];//CREATE NEW BUFFER WITH SIZE OF MESSAGE RECIEVED MINUS 1
-	 strcpy(rcvmsg, ""); //EMPTY "RECIEVED MESSAGE"
-	//FILL RECIEVED MESSAGE WITH RECIEVED BUFFER
-	 strcpy(rcvmsg, rcvbuf);
-	 int endln = strlen(rcvmsg);
-	 rcvmsg[endln-1] = '\0';//APPEND A NULL TO THE END OF THE BUFFER
-	 
+
+
 	 //what did I receive
-	 fout << endl << rcvmsg;//Output to file all data
-     cout << "Received:" << rcvmsg << endl;// << ":stuff" << "\n";
+	 fout << endl << rcvbuf;//Output to file all data
+     cout << "Received:" << rcvbuf << endl;
      
     	
 	 if (res != 0)
      {
-		if((strncmp(rcvmsg,"HELO",4) == 0) || (strncmp(rcvmsg,"EHLO",4) == 0))
+		if((strncmp(rcvbuf,"HELO",4) == 0) || (strncmp(rcvbuf,"EHLO",4) == 0))
 		{		
 			
 			cout << "Initialized connection from: " << inet_ntoa(cAddress.sin_addr) << endl;
 			//create the string to send back to the client
 			strcpy(sendData, "250  ");
-			//int len1 = strlen(rcvmsg);
-			
-			strncat(sendData, rcvmsg, (strlen(rcvmsg)));
+						
+			strncat(sendData, rcvbuf, (strlen(rcvbuf)));
 	
 			strcat(sendData, ". Thanks for joining my server.");
 			send(current_client,sendData,sizeof(sendData),0);
@@ -222,59 +220,41 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 			}
 			
 		}
-		if((strncmp(rcvmsg,"MAIL FROM:",10) == 0) || (strncmp(rcvmsg,"RCPT TO:",8) == 0))
+		if((strncmp(rcvbuf,"MAIL FROM:",10) == 0) || (strncmp(rcvbuf,"RCPT TO:",8) == 0))
 		{
 			strncpy(sendData,"250 Ok\0",7);
 			send(current_client,sendData,sizeof(sendData),0);
 		}
 
 			
-			if((strncmp(rcvmsg,"QUIT\r\n",5) == 0))
+			if((strncmp(rcvbuf,"QUIT\r\n",5) == 0))
 		{
 			strcpy(sendData,"221 Bye");
 			send(current_client,sendData,sizeof(sendData),0);
 			fout.close();
-			sendMessage(cAddress, messageLog); //STILL IN PROGRESS
+			sendMessage(cAddress, messageLog); 
 			ExitThread(0);
 		}
-		if((strncmp(rcvmsg,"DATA\r\n",5) == 0))
+		if((strncmp(rcvbuf,"DATA\r\n",5) == 0))
 		{
-			char message[1000];
-			for(int i = 0; i < 1000; i++)
-			{
-				strcpy(message,"\0");
-			}
+			
 			strcpy(sendData,"354 End data with <CR><LF>.<CR><LF>");
 			send(current_client,sendData,sizeof(sendData),0);
-			strcpy(sendData,"");
-			
-			
-			int check = 1;
-	 		
-			while(true)
-			{	
-				
-				for(int i = 0; i < 1000; i++)
-			{
-				strcpy(message,"\0");
-			}
-			
-			res = recv(current_client,message,sizeof(message),0);
-			cout << "res: " << res << endl;
-			//rcvbuf[(strlen(message))-1]='\0'; //remove newline char from end and replace it with a null char						
-			cout << "rcvbuf: " << message << endl;
-			check = strncmp(message, "\r\n.\r\n",1);			
-	
-			fout << endl << message;
-			
-		//	if(check != 0){
-		//	strcpy(sendData, "");
-		//	send(current_client,sendData,sizeof(sendData),0);
-		//	}
 		
+			
+	 		
+			while(strncmp(rcvbuf, "\r\n.\r\n",1) != 0)
+			{	
+		
+				
+				res = recv(current_client,rcvbuf,sizeof(rcvbuf),0);
+				
+				cout << "rcvbuf: " << rcvbuf << endl;
 						
-			if(check == 0)
-				{
+		
+				fout << endl << rcvbuf;
+			}
+	
 					for(int i = 0; i < sizeof(sendData); i++)
 					{
 						sendData[i] = '\0';
@@ -282,10 +262,8 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 					strncpy(sendData,"250 Ok: Queued as ",18);
 					strcat(sendData, itoa(threadID, ThrdID, 10));
 					send(current_client,sendData,sizeof(sendData),0);
-					break;
-					
-				}
-      	  }
+				
+      	  
 		}
 	  }
     }  
@@ -295,6 +273,7 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 
 int sendMessage(sockaddr_in client, char messageLog[32])
 {
+	
 	ifstream fin; 
 	ofstream fout;//create output file stream
 	fin.open(messageLog);//open message log for reading
@@ -311,6 +290,7 @@ int sendMessage(sockaddr_in client, char messageLog[32])
 	{
 		getline(fin, dummy);
 		cnt++;
+		
 	}
 	
 	string msg[cnt];//array of strings for the message
@@ -328,6 +308,7 @@ int sendMessage(sockaddr_in client, char messageLog[32])
 	int numLocalRcpt = 0;
 	
 	bool fromMyDomain = false;//Find out if the from is our local domain
+	cout << "msg[2] = " << msg[2] << endl;
 	if(msg[2].substr(((msg[2].find_first_of("@")+1), 14)) == OUR_DOMAIN)
 	{
 		fromMyDomain = true;
@@ -407,7 +388,7 @@ int sendMessage(sockaddr_in client, char messageLog[32])
     string localRcpts[numLocalRcpt];//array for local users
 //    
     if(toMyDomain)//Create an array of local users to modify the save message log
-    {
+    {cout << "in to my domain\n";
          int k = 0;
           for(int i = 0; i < numRcpts; i++) //check if any rcpts are for OUR_DOMAIN
          
