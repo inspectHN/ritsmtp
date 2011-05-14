@@ -402,7 +402,10 @@ int main()
             }
             receiveData(sock);
             
-            strcpy(buf,"");
+              for(int i=0; i<1000; i++)
+            {
+                buf[i] = '\0';    
+            }
             strcpy(buf,"QUIT\r\n");
             res = send(sock,buf,sizeof(buf),0);
             error = errorCheck(res);
