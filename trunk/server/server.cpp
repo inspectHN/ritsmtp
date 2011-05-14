@@ -7,6 +7,7 @@
 #include <iostream>
 #include <winsock.h>
 #include <winsock2.h>
+#include <direct.h>
 #include <string>
 #include <fstream>
 #include <sstream>
@@ -181,7 +182,7 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
   
   strcpy(sendData,"220 smtp.droptables.com\n");
   send(current_client,sendData,strlen(sendData),0);
-  fout << inet_ntoa(cAddress.sin_addr);
+  fout << inet_ntoa(cAddress.sin_addr) << endl;
  
   // our recv loop
   while(true)
@@ -193,9 +194,8 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 	 }  //EMPTY "RECIEVED BUFFER"
      res = recv(current_client,rcvbuf,sizeof(rcvbuf),0); // recv cmds
 
-
 	 //what did I receive
-	 fout << endl << rcvbuf;//Output to file all data
+	 fout << rcvbuf;//Output to file all data
      cout << "Received:" << rcvbuf << endl;
      
     	
@@ -208,9 +208,9 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 			//create the string to send back to the client
 			strcpy(sendData, "250  ");
 						
-			strncat(sendData, rcvbuf, (strlen(rcvbuf)));
+		//	strncat(sendData, rcvbuf, (strlen(rcvbuf)));
 	
-			strcat(sendData, ". Thanks for joining my server.");
+			strcat(sendData, " Thanks for joining my server.");
 			send(current_client,sendData,sizeof(sendData),0);
 		
 			//Empty the send buffer
@@ -227,43 +227,47 @@ DWORD WINAPI receive_cmds(LPVOID lpParam)
 		}
 
 			
-			if((strncmp(rcvbuf,"QUIT\r\n",5) == 0))
+		if((strncmp(rcvbuf,"DATA\r\n",5) == 0))
+		{
+			
+			strcpy(sendData,"354 End data with <CR><LF>.<CR><LF>");
+			send(current_client,sendData,sizeof(sendData),0);
+	
+			while(strncmp(rcvbuf, "\r\n.\r\n",1) != 0)
+			{	
+				
+				for(int i = 0; i < sizeof(rcvbuf); i++)
+				{
+					rcvbuf[i]='\0';
+				}
+				
+				res = recv(current_client,rcvbuf,sizeof(rcvbuf),0);
+				
+				cout << "Received: " << rcvbuf << endl;
+				fout << rcvbuf;
+			}
+	
+			for(int i = 0; i < sizeof(sendData); i++)
+			{
+				sendData[i] = '\0';
+			}
+			fout << endl;
+			strncpy(sendData,"250 Ok: Queued as ",18);
+			strcat(sendData, itoa(threadID, ThrdID, 10));
+			send(current_client,sendData,sizeof(sendData),0);
+			
+            for(int i = 0; i < sizeof(rcvbuf); i++)
+				{
+					rcvbuf[i]='\0';
+				}
+		}
+		if((strncmp(rcvbuf,"QUIT\r\n",5) == 0))
 		{
 			strcpy(sendData,"221 Bye");
 			send(current_client,sendData,sizeof(sendData),0);
 			fout.close();
 			sendMessage(cAddress, messageLog); 
 			ExitThread(0);
-		}
-		if((strncmp(rcvbuf,"DATA\r\n",5) == 0))
-		{
-			
-			strcpy(sendData,"354 End data with <CR><LF>.<CR><LF>");
-			send(current_client,sendData,sizeof(sendData),0);
-		
-			
-	 		
-			while(strncmp(rcvbuf, "\r\n.\r\n",1) != 0)
-			{	
-		
-				
-				res = recv(current_client,rcvbuf,sizeof(rcvbuf),0);
-				
-				cout << "rcvbuf: " << rcvbuf << endl;
-						
-		
-				fout << endl << rcvbuf;
-			}
-	
-					for(int i = 0; i < sizeof(sendData); i++)
-					{
-						sendData[i] = '\0';
-					}
-					strncpy(sendData,"250 Ok: Queued as ",18);
-					strcat(sendData, itoa(threadID, ThrdID, 10));
-					send(current_client,sendData,sizeof(sendData),0);
-				
-      	  
 		}
 	  }
     }  
@@ -308,32 +312,31 @@ int sendMessage(sockaddr_in client, char messageLog[32])
 	int numLocalRcpt = 0;
 	
 	bool fromMyDomain = false;//Find out if the from is our local domain
-	cout << "msg[2] = " << msg[2] << endl;
-	if(msg[2].substr(((msg[2].find_first_of("@")+1), 14)) == OUR_DOMAIN)
+	
+    
+	if(msg[2].substr(((msg[2].find_first_of("@")+1)),14) == OUR_DOMAIN)
 	{
 		fromMyDomain = true;
 	}
-//	cout << "from domain is: " << fromMyDomain << endl << endl;//DEBUGGING
 	
 	for(int i = 3; i < cnt; i++) //Count number of rcpts.
 	{
          if( msg[i].substr(0,7) == "RCPT TO"  )
             numRcpts++;
+            
     }
 
     bool toMyDomain = false; //set to true if any rcpt is OUR_DOMAIN
     bool toOtherDomain = false; //set true if any rcpt is other domain
     
-    
-    
-    
+   
     for(int i = 0; i < numRcpts; i++) //check if any rcpts are for OUR_DOMAIN
 	{
-         if(  (msg[i+3].substr((msg[i+3].find_first_of("@")+1), 14)) == OUR_DOMAIN)//match domain name (start at @+1, go for 14 chars)
+         if(  (msg[i+3].substr((msg[i+3].find_first_of("@")+1),14)) == OUR_DOMAIN)//match domain name (start at @+1, go for 14 chars)
          {
             toMyDomain = true;
             numLocalRcpt++;   
-			msg[i+3] = " ";         
+			        
          }
          else 
          {
@@ -344,57 +347,18 @@ int sendMessage(sockaddr_in client, char messageLog[32])
     }
     
     
-  //  cout << "array before: \n";
-//    //TEMP
-//    for(int i = 0; i < cnt; i++)
-//    {
-//		cout << msg[i] << endl;
-//	}
-//    
-  //  string msg1[cnt-numLocalRcpt];
-   // int cnt1++;
-    
-   // for (int i =0; i < cnt; i++)//remove "to" OUR_DOMAIN from array
-//    {
-//		if(msg[i] != " "){
-//			msg1[i]=msg[i];
-//		}
-//		if(msg[i] == " ")
-//		{
-//			
-//			cout << " line is: " << msg[i] << endl;
-//			msg1[i] = msg[i+1];
-//			cout << "msg1: " << msg1[i] << endl;
-//			//cnt1++;
-//			
-//		
-//		}
-//		else
-//		{
-//			i++;
-//		
-//		}
-//	}
 
-	// cnt -= numLocalRcpt;
-//	 cout << "array after: \n";
-//    //TEMP
-//    for(int i = 0; i < cnt; i++)
-//    {
-//		cout << msg[i] << endl;
-//	}
-//		
-//
     string localRcpts[numLocalRcpt];//array for local users
 //    
     if(toMyDomain)//Create an array of local users to modify the save message log
-    {cout << "in to my domain\n";
+    {
          int k = 0;
           for(int i = 0; i < numRcpts; i++) //check if any rcpts are for OUR_DOMAIN
          
 	    {
-             if(  (msg[i+3].substr((msg[i+3].find_first_of("@")+1), 14)) == OUR_DOMAIN)//match domain name (start at @+1, go for 14 chars)
+             if(  (msg[i+3].substr(((msg[i+3].find_first_of("@")+1)),14)) == OUR_DOMAIN)//match domain name (start at @+1, go for 14 chars)
              {
+            
                 localRcpts[k] = (msg[i+3].substr(9));
                 localRcpts[k]=localRcpts[k].substr(0,(localRcpts[k].length()-1));//truncate the final ">"
                 k++;
@@ -413,11 +377,15 @@ int sendMessage(sockaddr_in client, char messageLog[32])
                 int id = GetCurrentThreadId();
                 std::stringstream ss;//create a stringstream object
                 ss << id;//put thread id into the stringstream
-                
-                string outputFile = localRcpts[i];
+                string name = localRcpts[i].substr(0, localRcpts[i].find_first_of("@"));
+                string outputFile;
+                outputFile += "./" + name + "/";
+                mkdir(outputFile.c_str());//CREATE NEW FOLDER FOR USERS
+                outputFile += localRcpts[i];
                 outputFile += "_";
-                outputFile+= ss.str();//pull the id out of the stringstream object as a string.
+                outputFile += ss.str();//pull the id out of the stringstream object as a string.
                 outputFile += ".eml";//These lines create a new output .eml file for each user who is a RCPT on an email
+                
                 fout.open(outputFile.c_str());
                 for(int k = 0; k < cnt; k++)
                 {
@@ -496,7 +464,7 @@ int sendMessage(sockaddr_in client, char messageLog[32])
 	}//end fromMyDomain
 
 //COMPARISON 2:  
-//if message comes in from left, check rcpts, deliver to local, remove from list, forward out right side
+//if message comes in from left, check rcpts, deliver to local, remove from list, forward out right side/////////////////////////////////////////////////////////////
 	if(inet_ntoa(client.sin_addr) == LSIDE)
 	{
 		
@@ -505,16 +473,20 @@ int sendMessage(sockaddr_in client, char messageLog[32])
 		
 		if(toMyDomain)//write out email to local user .eml file
      {
-            for(int i = 0; i < numLocalRcpt; i++)
+             for(int i = 0; i < numLocalRcpt; i++)
             {
                 int id = GetCurrentThreadId();
                 std::stringstream ss;//create a stringstream object
                 ss << id;//put thread id into the stringstream
-                
-                string outputFile = localRcpts[i];
+                string name = localRcpts[i].substr(0, localRcpts[i].find_first_of("@"));
+                string outputFile;
+                outputFile += "./" + name + "/";
+                mkdir(outputFile.c_str());//CREATE NEW FOLDER FOR USERS
+                outputFile += localRcpts[i];
                 outputFile += "_";
-                outputFile+= ss.str();//pull the id out of the stringstream object as a string.
+                outputFile += ss.str();//pull the id out of the stringstream object as a string.
                 outputFile += ".eml";//These lines create a new output .eml file for each user who is a RCPT on an email
+               
                 fout.open(outputFile.c_str());
                 for(int k = 0; k < cnt; k++)
                 {
@@ -522,7 +494,7 @@ int sendMessage(sockaddr_in client, char messageLog[32])
                     k++;
                 }
                 fout.close();
-			}
+            }
     }//END TO MY DOMAIN
 		if(toOtherDomain)//if there is a rcpt to another domain as well, send it to the right side
             {
@@ -608,11 +580,15 @@ int sendMessage(sockaddr_in client, char messageLog[32])
                 int id = GetCurrentThreadId();
                 std::stringstream ss;//create a stringstream object
                 ss << id;//put thread id into the stringstream
-                
-                string outputFile = localRcpts[i];
+                string name = localRcpts[i].substr(0, localRcpts[i].find_first_of("@"));
+                string outputFile;
+                outputFile += "./" + name + "/";
+                mkdir(outputFile.c_str());//CREATE NEW FOLDER FOR USERS
+                outputFile += localRcpts[i];
                 outputFile += "_";
-                outputFile+= ss.str();//pull the id out of the stringstream object as a string.
+                outputFile += ss.str();//pull the id out of the stringstream object as a string.
                 outputFile += ".eml";//These lines create a new output .eml file for each user who is a RCPT on an email
+                cout<<"OF: " << outputFile << endl;
                 fout.open(outputFile.c_str());
                 for(int k = 0; k < cnt; k++)
                 {
@@ -620,6 +596,7 @@ int sendMessage(sockaddr_in client, char messageLog[32])
                     k++;
                 }
                 fout.close();
+            }
 			}
     }//END TO MY DOMAIN
 		if(toOtherDomain)//if there is a rcpt to another domain as well, send it to the right side
@@ -685,7 +662,7 @@ int sendMessage(sockaddr_in client, char messageLog[32])
                             char *RecvdData;
                            int ret = recv(sock,RecvdData,sizeof(RecvdData),0);//recieve any data from the server as we send
                 }
-                cout << "message has been forwarded to the RSIDE server\n";
+                cout << "message has been forwarded to the LSIDE server\n";
             }//end toOtherDomain
 
 	}	//END TO RSIDE
